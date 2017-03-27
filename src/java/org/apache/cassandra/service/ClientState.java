@@ -431,13 +431,17 @@ public class ClientState
     {
         // TODO: Decorate Abac
 
-        return null;
+        logger.info("Decorating the query [{}], success.", cqlQuery);
+
+        return cqlQuery;
     }
 
     public String decorateAbac(TableMetadataRef tableMetadataRef, String cqlQuery)
     {
         // TODO: DecorateAbac
 
-        return null;
+        logger.info("Decorating the query [{}], success.", cqlQuery);
+
+        return cqlQuery;
     }
 }
