@@ -49,6 +49,7 @@ public final class AuthKeyspace
             "abac policy definitions",
             "CREATE TABLE %s ("
             + "policy text,"
+            + "columnfamily text,"
             + "description text,"
             + "obj blob,"
             + "type text,"

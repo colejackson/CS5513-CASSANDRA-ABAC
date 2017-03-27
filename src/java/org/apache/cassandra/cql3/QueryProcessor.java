@@ -229,7 +229,7 @@ public class QueryProcessor implements QueryHandler
         {
             ClientState clientState = queryState.getClientState();
 
-            String decoratedCqlQuery = prepared.decorateAbac(clientState, );
+            String decoratedCqlQuery = prepared.decorateAbac(clientState, queryString);
 
             if(!decoratedCqlQuery.equals(queryString) || null == decoratedCqlQuery)
             {

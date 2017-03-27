@@ -1129,11 +1129,9 @@ listPermissionsStatement returns [ListPermissionsStatement stmt]
 
 basicPermissions returns [Set<Permission> perms]
     : K_ALL ( K_PERMISSIONS )?       { $perms = Permission.BASIC; }
-    : K_SELECT ( K_PERMISSION )?     { $perms = EnumSet.of(Permission.SELECT); }
-    : K_MODIFY ( K_PERMISSION )?     { $perms = EnumSet.of(Permission.MODIFY); }
+    | K_SELECT ( K_PERMISSION )?     { $perms = EnumSet.of(Permission.SELECT); }
+    | K_MODIFY ( K_PERMISSION )?     { $perms = EnumSet.of(Permission.MODIFY); }
     ;
-
-policyClause returns [PolicyClause pc]
 
 permission returns [Permission perm]
     : p=(K_CREATE | K_ALTER | K_DROP | K_SELECT | K_MODIFY | K_AUTHORIZE | K_DESCRIBE | K_EXECUTE)
@@ -1393,12 +1391,13 @@ userOrRoleName returns [RoleName name]
 policyName returns [PolicyName pn]
     @init { PolicyName pol = PolicyName(); }
     : plcyName[pol] { $pn = pol; }
+    ;
 
 ksName[KeyspaceElementName name]
-    : t=IDENT              { $name.setKeyspace($t.text, false);}
-    | t=QUOTED_NAME        { $name.setKeyspace($t.text, true);}
-    | k=unreserved_keyword { $name.setKeyspace(k, false);}
-    | QMARK {addRecognitionError("Bind variables cannot be used for keyspace names");}
+    : t=IDENT              { $name.setKeyspace($t.text, false); }
+    | t=QUOTED_NAME        { $name.setKeyspace($t.text, true); }
+    | k=unreserved_keyword { $name.setKeyspace(k, false); }
+    | QMARK {addRecognitionError("Bind variables cannot be used for keyspace names"); }
     ;
 
 cfName[CFName name]
