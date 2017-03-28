@@ -1370,7 +1370,7 @@ userOrRoleName returns [RoleName name]
     ;
 
 policyName returns [PolicyName pn]
-    @init { PolicyName pol = PolicyName(); }
+    @init { PolicyName pol = new PolicyName(); }
     : plcyName[pol] { $pn = pol; }
     ;
 
@@ -1412,10 +1412,10 @@ plcyName[PolicyName pn]
     ;
 
 policyClause returns [PolicyClause pc] // TODO: Test This
-    : attr=STRING_LITERAL type=relationType col=cident { $pc = new PolicyClause($attr.text, type, col); }
-    | attr=STRING_LITERAL K_IS K_NOT K_NULL { $pc = new PolicyClause($attr.text, Operator.IS_NOT, Constants.NULL_LITERAL); }
-    | attr=STRING_LITERAL K_IN col=cident { $pc = new PolicyClause($attr.text, col); }
-    | attr=STRING_LITERAL cont=containsOperator col=cident { $pc = new PolicyClause($attr.text, cont, col); }
+    : attr=STRING_LITERAL type=relationType col=ident { $pc = new PolicyClause($attr.text, type, col); }
+    | attr=STRING_LITERAL K_IS K_NOT K_NULL { $pc = new PolicyClause($attr.text, Operator.IS_NOT); }
+    | attr=STRING_LITERAL K_IN col=ident { $pc = new PolicyClause($attr.text, col); }
+    | attr=STRING_LITERAL cont=containsOperator col=ident { $pc = new PolicyClause($attr.text, cont, col); }
     ;
 
 constant returns [Constants.Literal constant]

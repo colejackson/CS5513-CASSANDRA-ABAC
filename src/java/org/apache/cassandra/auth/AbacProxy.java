@@ -9,6 +9,9 @@ import org.apache.cassandra.schema.SchemaConstants;
 import org.apache.cassandra.schema.TableMetadata;
 import org.apache.cassandra.transport.messages.ResultMessage;
 
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Lists;
+
 import javax.xml.bind.DatatypeConverter;
 import java.io.*;
 import java.util.HashSet;

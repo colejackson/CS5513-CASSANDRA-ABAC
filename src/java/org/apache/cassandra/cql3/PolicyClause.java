@@ -10,7 +10,7 @@ public class PolicyClause implements Serializable
     private String attribute;
     private Operator operator;
     private ColumnIdentifier colId;
-    private Constants constant;
+    private Boolean containsNullLiteral = false;
 
     public PolicyClause(String attribute, Operator op, ColumnIdentifier colId)
     {
@@ -19,11 +19,11 @@ public class PolicyClause implements Serializable
         this.colId = colId;
     }
 
-    public PolicyClause(String attribute, Operator op, Constants constants)
+    public PolicyClause(String attribute, Operator op)
     {
         this.attribute = attribute;
         this.operator = op;
-        this.constant = constants;
+        this.containsNullLiteral = true;
     }
 
     public PolicyClause(String attribute, ColumnIdentifier colId)
@@ -43,7 +43,7 @@ public class PolicyClause implements Serializable
         {
             return String.format("Attribute %s value is in column %s", attribute, colId.toCQLString());
         }
-        else if(constant != null)
+        else if(containsNullLiteral)
         {
             return String.format("Attribute %s value is not null", attribute);
         }

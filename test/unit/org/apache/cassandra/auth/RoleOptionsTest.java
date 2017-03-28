@@ -132,6 +132,11 @@ public class RoleOptionsTest
     {
         return new IRoleManager()
         {
+            public Object getRoleAttribute(RoleResource roleResource, String attributeName)
+            {
+                return null;
+            }
+
             public Set<Option> supportedOptions()
             {
                 return ImmutableSet.copyOf(supportedOptions);

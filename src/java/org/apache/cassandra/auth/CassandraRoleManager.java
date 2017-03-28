@@ -225,14 +225,14 @@ public class CassandraRoleManager implements IRoleManager
                                          options.getSuperuser().or(false),
                                          options.getLogin().or(false),
                                          escape(hashpw(options.getPassword().get())),
-                                         options.getAttributes().or(null))
+                                         options.getAttributes().or("{}"))
                          : String.format("INSERT INTO %s.%s (role, is_superuser, can_login, attributes) VALUES ('%s', %s, %s)",
                                          SchemaConstants.AUTH_KEYSPACE_NAME,
                                          AuthKeyspace.ROLES,
                                          escape(role.getRoleName()),
                                          options.getSuperuser().or(false),
                                          options.getLogin().or(false),
-                                         options.getAttributes().or(null));
+                                         options.getAttributes().or("{}"));
         process(insertCql, consistencyForRole(role.getRoleName()));
     }
 
