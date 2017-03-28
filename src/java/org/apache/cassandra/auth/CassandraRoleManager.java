@@ -34,6 +34,7 @@ import org.slf4j.LoggerFactory;
 import org.apache.cassandra.concurrent.ScheduledExecutors;
 import org.apache.cassandra.config.Config;
 import org.apache.cassandra.config.DatabaseDescriptor;
+import org.apache.cassandra.db.marshal.BytesType;
 import org.apache.cassandra.schema.Schema;
 import org.apache.cassandra.schema.SchemaConstants;
 import org.apache.cassandra.cql3.*;
@@ -182,12 +183,12 @@ public class CassandraRoleManager implements IRoleManager
     }
 
     @Override
-    public Object getRoleAttribute(RoleResource roleResource, String attributeName)
+    public Object getRoleAttribute(RoleResource roleResource, String attributeName, AbstractType attrType)
     {
         String selectCql = String.format("SELECT attributes FROM %s.%s WHERE role = %s",
                 SchemaConstants.AUTH_KEYSPACE_NAME,
                 AuthKeyspace.ROLES,
-                roleResource.getName());
+                '\'' + roleResource.getRoleName().replace("'", "''") + '\'');
 
         UntypedResultSet results = process(selectCql, consistencyForRole(roleResource.getRoleName()));
 
@@ -196,10 +197,15 @@ public class CassandraRoleManager implements IRoleManager
             return null;
         }
 
-        Map<String, ByteBuffer> attributes =
+        Map<String, Object> attributes =
                 results.one().getMap("attributes",
-                        (AbstractType<String>)CQL3Type.Native.TEXT.getType(),
-                        (AbstractType<ByteBuffer>)CQL3Type.Native.BLOB.getType());
+                        UTF8Type.instance,
+                        attrType);
+
+        if(attributes == null)
+        {
+            return null;
+        }
 
         return attributes.get(attributeName);
     }

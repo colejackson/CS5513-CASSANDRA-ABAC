@@ -56,7 +56,7 @@ public class CreatePolicyStatement extends AbacStatement
     {
         state.ensureNotAnonymous();
 
-        if(AbacProxy.policyExists(cfName.getColumnFamily(), policyName.getName()))
+        if(AbacProxy.policyExists(cfName.getKeyspace() + '.' + cfName.getColumnFamily(), policyName.getName()))
         {
             throw new InvalidRequestException("A policy with this name already exists");
         }
@@ -65,7 +65,10 @@ public class CreatePolicyStatement extends AbacStatement
     @Override
     public ResultMessage execute(ClientState state) throws RequestValidationException, RequestExecutionException
     {
-        AbacProxy.createPolicy(policyName.getName(), cfName.getColumnFamily(), perms, policyClause);
+        AbacProxy.createPolicy(policyName.getName(),
+                               cfName.getKeyspace() + "." + cfName.getColumnFamily(),
+                               perms,
+                               policyClause);
 
         return null;
     }

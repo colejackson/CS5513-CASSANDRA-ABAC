@@ -231,7 +231,7 @@ public class QueryProcessor implements QueryHandler
 
             String decoratedCqlQuery = prepared.decorateAbac(clientState, queryString);
 
-            if(!decoratedCqlQuery.equals(queryString) || null == decoratedCqlQuery)
+            if(!queryString.equals(decoratedCqlQuery) && decoratedCqlQuery != null)
             {
                 return process(decoratedCqlQuery, queryState, options, queryStartNanoTime);
             }

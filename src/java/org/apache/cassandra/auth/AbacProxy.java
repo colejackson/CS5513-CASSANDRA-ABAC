@@ -29,9 +29,8 @@ public final class AbacProxy
     private static final List<ColumnSpecification> metadata =
             ImmutableList.of(
                     new ColumnSpecification(KS, CF, new ColumnIdentifier("policy", true), UTF8Type.instance),
-                    new ColumnSpecification(KS, CF, new ColumnIdentifier("columnfamily", true), UTF8Type.instance),
+                    new ColumnSpecification(KS, CF, new ColumnIdentifier("cf", true), UTF8Type.instance),
                     new ColumnSpecification(KS, CF, new ColumnIdentifier("description", true), UTF8Type.instance),
-                    new ColumnSpecification(KS, CF, new ColumnIdentifier("obj", true), BytesType.instance),
                     new ColumnSpecification(KS, CF, new ColumnIdentifier("type", true), UTF8Type.instance));
 
     public static void createPolicy(String policyName, String cfName, Set<Permission> perms, PolicyClause policy)
@@ -66,15 +65,15 @@ public final class AbacProxy
         String cqlString = String.format("INSERT INTO %s.%s (%s, %s, %s, %s, %s) VALUES (%s, %s, %s, %s, %s)",
                 SchemaConstants.AUTH_KEYSPACE_NAME,
                 AuthKeyspace.POLICIES,
-                escape("policy"),
-                escape("columnFamily"),
-                escape("description"),
-                escape("obj"),
-                escape("type"),
+                "policy",
+                "cf",
+                "description",
+                "obj",
+                "type",
                 escape(policyName),
                 escape(cfName),
                 escape(policy.toString()),
-                DatatypeConverter.printHexBinary(out.toByteArray()),
+                "0x" + DatatypeConverter.printHexBinary(out.toByteArray()),
                 escape(type));
 
         QueryProcessor.process(cqlString, ConsistencyLevel.LOCAL_ONE);
@@ -82,7 +81,7 @@ public final class AbacProxy
 
     public static void dropPolicy(String columnFamilyName, String policyName)
     {
-        String cqlString = String.format("DELETE FROM %s.%s WHERE columnfamily = %s AND policy = %s",
+        String cqlString = String.format("DELETE FROM %s.%s WHERE cf = %s AND policy = %s",
                 SchemaConstants.AUTH_KEYSPACE_NAME,
                 AuthKeyspace.POLICIES,
                 escape(columnFamilyName),
@@ -93,7 +92,7 @@ public final class AbacProxy
 
     public static boolean policyExists(String columnFamilyName, String policyName)
     {
-        String cqlString = String.format("SELECT obj FROM %s.%s WHERE columnfamily = %s AND policy = %s",
+        String cqlString = String.format("SELECT obj FROM %s.%s WHERE cf = %s AND policy = %s",
                 SchemaConstants.AUTH_KEYSPACE_NAME,
                 AuthKeyspace.POLICIES,
                 escape(columnFamilyName),
@@ -105,15 +104,14 @@ public final class AbacProxy
         return !results.isEmpty();
     }
 
-    static Set<PolicyClause> listAllPoliciesOn(IResource resource, Permission permission)
+    static Set<PolicyClause> getAllPoliciesOn(String tableName, String permissionString)
     {
         Set<PolicyClause> ret = new HashSet<>();
 
-        String cqlString = String.format("SELECT obj FROM %s.%s WHERE columnfamily = %s AND type = %s",
+        String cqlString = String.format("SELECT obj FROM %s.%s WHERE cf = %s",
                 SchemaConstants.AUTH_KEYSPACE_NAME,
                 AuthKeyspace.POLICIES,
-                escape(resource.getName()),
-                escape(permission.toString()));
+                escape(tableName));
 
         UntypedResultSet results = QueryProcessor.process(cqlString, ConsistencyLevel.LOCAL_ONE);
 
@@ -121,11 +119,14 @@ public final class AbacProxy
         {
             try
             {
-                ret.add((PolicyClause) (new ObjectInputStream(new ByteArrayInputStream(r.getBlob("obj").array())).readObject()));
+                if(r.getString("type").equalsIgnoreCase(permissionString))
+                {
+                    ret.add((PolicyClause) (new ObjectInputStream(new ByteArrayInputStream(r.getBlob("obj").array())).readObject()));
+                }
             }
             catch (IOException | ClassNotFoundException c)
             {
-                c.printStackTrace();
+                throw new RuntimeException("Problem with deserializing policies.");
             }
         });
 
@@ -134,7 +135,7 @@ public final class AbacProxy
 
     public static ResultMessage listAllPoliciesOnTable(String tableName)
     {
-        String cqlString = String.format("SELECT obj FROM %s.%s WHERE columnfamily = %s",
+        String cqlString = String.format("SELECT * FROM %s.%s WHERE cf = %s",
                 SchemaConstants.AUTH_KEYSPACE_NAME,
                 AuthKeyspace.POLICIES,
                 escape(tableName));
@@ -150,9 +151,8 @@ public final class AbacProxy
 
         untypedResultSet.forEach(row -> {
             results.addColumnValue(row.getBytes("policy"));
-            results.addColumnValue(row.getBytes("columnfamily"));
+            results.addColumnValue(row.getBytes("cf"));
             results.addColumnValue(row.getBytes("description"));
-            results.addColumnValue(row.getBlob("obj"));
             results.addColumnValue(row.getBytes("type"));
         });
 
@@ -161,6 +161,6 @@ public final class AbacProxy
 
     private static String escape(String str)
     {
-        return "'" + str.replace("'", "''") + "'";
+        return '\'' + str.replace("'", "''") + '\'';
     }
 }

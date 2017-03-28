@@ -18,12 +18,14 @@
 package org.apache.cassandra.auth;
 
 import java.lang.reflect.Field;
+import java.nio.ByteBuffer;
 import java.util.*;
 
 import com.google.common.collect.ImmutableSet;
 import org.junit.Test;
 
 import org.apache.cassandra.config.DatabaseDescriptor;
+import org.apache.cassandra.db.marshal.AbstractType;
 import org.apache.cassandra.exceptions.*;
 import org.apache.cassandra.utils.FBUtilities;
 
@@ -132,7 +134,7 @@ public class RoleOptionsTest
     {
         return new IRoleManager()
         {
-            public Object getRoleAttribute(RoleResource roleResource, String attributeName)
+            public Object getRoleAttribute(RoleResource roleResource, String attributeName, AbstractType attrType)
             {
                 return null;
             }

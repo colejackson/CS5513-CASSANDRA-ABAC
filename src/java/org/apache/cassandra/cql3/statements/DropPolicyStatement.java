@@ -49,7 +49,8 @@ public class DropPolicyStatement extends AbacStatement
     {
         state.ensureNotAnonymous();
 
-        if(!AbacProxy.policyExists(cfName.getColumnFamily(), policyName.getName()))
+        if(!AbacProxy.policyExists(cfName.getKeyspace() + '.' + cfName.getColumnFamily(),
+                                   policyName.getName()))
         {
             throw new InvalidRequestException("A policy with this name does not exist.");
         }
@@ -58,7 +59,7 @@ public class DropPolicyStatement extends AbacStatement
     @Override
     public ResultMessage execute(ClientState state) throws RequestValidationException, RequestExecutionException
     {
-        AbacProxy.dropPolicy(cfName.getColumnFamily(), policyName.getName());
+        AbacProxy.dropPolicy(cfName.getKeyspace() + '.' + cfName.getColumnFamily(), policyName.getName());
 
         return null;
     }

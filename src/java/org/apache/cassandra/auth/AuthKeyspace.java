@@ -19,7 +19,12 @@ package org.apache.cassandra.auth;
 
 import java.util.concurrent.TimeUnit;
 
+import org.apache.cassandra.cql3.QueryProcessor;
+import org.apache.cassandra.cql3.statements.CreateIndexStatement;
 import org.apache.cassandra.cql3.statements.CreateTableStatement;
+import org.apache.cassandra.db.ConsistencyLevel;
+import org.apache.cassandra.schema.IndexMetadata;
+import org.apache.cassandra.schema.Indexes;
 import org.apache.cassandra.schema.TableId;
 import org.apache.cassandra.schema.TableMetadata;
 import org.apache.cassandra.schema.SchemaConstants;
@@ -49,11 +54,11 @@ public final class AuthKeyspace
             "abac policy definitions",
             "CREATE TABLE %s ("
             + "policy text,"
-            + "columnfamily text,"
+            + "cf text,"
             + "description text,"
             + "obj blob,"
             + "type text,"
-            + "PRIMARY KEY(policy, columnfamily))");
+            + "PRIMARY KEY(cf, policy))");
 
     private static final TableMetadata Roles =
         parse(ROLES,
@@ -92,7 +97,6 @@ public final class AuthKeyspace
               + "role text,"
               + "PRIMARY KEY(resource, role))");
 
-
     private static TableMetadata parse(String name, String description, String cql)
     {
         return CreateTableStatement.parse(format(cql, name), SchemaConstants.AUTH_KEYSPACE_NAME)
@@ -107,6 +111,6 @@ public final class AuthKeyspace
     {
         return KeyspaceMetadata.create(SchemaConstants.AUTH_KEYSPACE_NAME,
                                        KeyspaceParams.simple(1),
-                                       Tables.of(Policies, Roles, RoleMembers, RolePermissions, ResourceRoleIndex));
+                                       Tables.of(Roles, RoleMembers, RolePermissions, ResourceRoleIndex, Policies));
     }
 }

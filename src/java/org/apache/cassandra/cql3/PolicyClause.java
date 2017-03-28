@@ -7,29 +7,44 @@ import java.io.Serializable;
  */
 public class PolicyClause implements Serializable
 {
-    private String attribute;
-    private Operator operator;
-    private ColumnIdentifier colId;
-    private Boolean containsNullLiteral = false;
+    private final String attribute;
+
+    private transient Operator operator;
+    private String opString;
+
+    private transient ColumnIdentifier colId;
+    private final String colIdString;
+
+    private boolean containsNullLiteral = false;
 
     public PolicyClause(String attribute, Operator op, ColumnIdentifier colId)
     {
         this.attribute = attribute;
+
         this.operator = op;
+        this.opString = this.operator.toString();
+
         this.colId = colId;
+        this.colIdString = this.colId.toCQLString();
     }
 
     public PolicyClause(String attribute, Operator op)
     {
         this.attribute = attribute;
+
         this.operator = op;
+        this.opString = this.operator.toString();
+
         this.containsNullLiteral = true;
+        this.colIdString = this.colId.toCQLString();
     }
 
     public PolicyClause(String attribute, ColumnIdentifier colId)
     {
         this.attribute = attribute;
+
         this.colId = colId;
+        this.colIdString = this.colId.toString();
     }
 
     @Override
@@ -37,11 +52,11 @@ public class PolicyClause implements Serializable
     {
         if(operator == Operator.CONTAINS)
         {
-            return String.format("Column value %s contains attribute %s value.", colId.toCQLString(), attribute);
+            return String.format("Column value %s contains attribute %s value.", colIdString, attribute);
         }
         else if(operator == null)
         {
-            return String.format("Attribute %s value is in column %s", attribute, colId.toCQLString());
+            return String.format("Attribute %s value is in column %s", attribute, colIdString);
         }
         else if(containsNullLiteral)
         {
@@ -49,7 +64,7 @@ public class PolicyClause implements Serializable
         }
         else
         {
-            return String.format("Column value %s is %d attribute %s value", colId.toCQLString(), operator.getValue(), attribute);
+            return String.format("Column value %s is %s attribute %s value", colIdString, opString, attribute);
         }
     }
 

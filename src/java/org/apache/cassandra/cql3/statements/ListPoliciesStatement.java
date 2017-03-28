@@ -49,6 +49,6 @@ public class ListPoliciesStatement extends AbacStatement
     @Override
     public ResultMessage execute(ClientState state) throws RequestValidationException, RequestExecutionException
     {
-        return AbacProxy.listAllPoliciesOnTable(cfName.getColumnFamily());
+        return AbacProxy.listAllPoliciesOnTable(cfName.getKeyspace() + '.' + cfName.getColumnFamily());
     }
 }
