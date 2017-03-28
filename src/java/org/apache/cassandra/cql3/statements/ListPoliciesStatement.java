@@ -1,5 +1,6 @@
 package org.apache.cassandra.cql3.statements;
 
+import org.apache.cassandra.auth.AbacProxy;
 import org.apache.cassandra.auth.AuthenticatedUser;
 import org.apache.cassandra.auth.Permission;
 import org.apache.cassandra.cql3.CFName;
@@ -48,8 +49,6 @@ public class ListPoliciesStatement extends AbacStatement
     @Override
     public ResultMessage execute(ClientState state) throws RequestValidationException, RequestExecutionException
     {
-        // TODO: CALL ABAC PROXY
-
-        return null;
+        return AbacProxy.listAllPoliciesOnTable(cfName.getColumnFamily());
     }
 }

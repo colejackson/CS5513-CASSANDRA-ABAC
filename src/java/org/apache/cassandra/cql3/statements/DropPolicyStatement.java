@@ -1,5 +1,6 @@
 package org.apache.cassandra.cql3.statements;
 
+import org.apache.cassandra.auth.AbacProxy;
 import org.apache.cassandra.auth.AuthenticatedUser;
 import org.apache.cassandra.auth.Permission;
 import org.apache.cassandra.cql3.CFName;
@@ -48,13 +49,16 @@ public class DropPolicyStatement extends AbacStatement
     {
         state.ensureNotAnonymous();
 
-        // TODO: CALL PROXY ENSURE POLICY EXISTS
+        if(!AbacProxy.policyExists(cfName.getColumnFamily(), policyName.getName()))
+        {
+            throw new InvalidRequestException("A policy with this name does not exist.");
+        }
     }
 
     @Override
     public ResultMessage execute(ClientState state) throws RequestValidationException, RequestExecutionException
     {
-        // TODO: CALL ABAC PROXY
+        AbacProxy.dropPolicy(cfName.getColumnFamily(), policyName.getName());
 
         return null;
     }
