@@ -17,6 +17,7 @@
  */
 package org.apache.cassandra.auth;
 
+import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
@@ -26,6 +27,7 @@ import com.google.common.collect.Sets;
 import org.apache.commons.lang3.StringUtils;
 
 import org.apache.cassandra.config.DatabaseDescriptor;
+import org.apache.cassandra.db.marshal.AbstractType;
 
 /**
  * IResource implementation representing database roles.
@@ -153,10 +155,9 @@ public class RoleResource implements IResource, Comparable<RoleResource>
         return level == Level.ROOT ? ROOT_LEVEL_PERMISSIONS : ROLE_LEVEL_PERMISSIONS;
     }
 
-    @Override
-    public Object getAttribute(String attributeName)
+    public Object getAttribute(String attributeName, AbstractType attrType)
     {
-        return DatabaseDescriptor.getRoleManager().getRoleAttribute(this, attributeName);
+        return DatabaseDescriptor.getRoleManager().getRoleAttribute(this, attributeName, attrType);
     }
 
     public int compareTo(RoleResource o)

@@ -17,9 +17,11 @@
  */
 package org.apache.cassandra.auth;
 
+import java.nio.ByteBuffer;
 import java.util.Map;
 import java.util.Set;
 
+import org.apache.cassandra.db.marshal.AbstractType;
 import org.apache.cassandra.exceptions.ConfigurationException;
 import org.apache.cassandra.exceptions.RequestExecutionException;
 import org.apache.cassandra.exceptions.RequestValidationException;
@@ -41,7 +43,7 @@ public interface IRoleManager
      * @param attributeName the String representing an attributes name.
      * @return an object stored as a Role attribute.
      */
-    Object getRoleAttribute(RoleResource roleResource, String attributeName);
+    Object getRoleAttribute(RoleResource roleResource, String attributeName, AbstractType attrType);
 
     /**
      * Supported options for CREATE ROLE/ALTER ROLE (and

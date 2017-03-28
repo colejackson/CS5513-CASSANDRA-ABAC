@@ -7,12 +7,12 @@ import org.apache.cassandra.utils.Pair;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
 
-import static org.apache.cassandra.auth.AbacProxy.listAllPoliciesOn;
+import static org.apache.cassandra.auth.AbacProxy.getAllPoliciesOn;
 
 /**
  * Created by coleman on 3/27/17.
  */
-public class PolicyCache extends AuthCache<Pair<IResource,Permission>, Set<PolicyClause>>
+public class PolicyCache extends AuthCache<Pair<String,String>, Set<PolicyClause>>
 {
     public PolicyCache() // TODO: ABAC Update to not use the permissions cache methods.
     {
@@ -23,15 +23,15 @@ public class PolicyCache extends AuthCache<Pair<IResource,Permission>, Set<Polic
                 DatabaseDescriptor::getPermissionsUpdateInterval,
                 DatabaseDescriptor::setPermissionsCacheMaxEntries,
                 DatabaseDescriptor::getPermissionsCacheMaxEntries,
-                (p) -> listAllPoliciesOn(p.left, p.right),
+                (p) -> getAllPoliciesOn(p.left, p.right),
                 DatabaseDescriptor::isUsingAbac);
     }
 
-    public Set<PolicyClause> getPolicies(IResource resource, Permission perm)
+    public Set<PolicyClause> getPolicies(String tableName, String permString)
     {
         try
         {
-            return get(Pair.create(resource, perm));
+            return get(Pair.create(tableName, permString));
         }
         catch (ExecutionException e)
         {

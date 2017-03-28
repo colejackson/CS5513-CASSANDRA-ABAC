@@ -17,12 +17,14 @@
  */
 package org.apache.cassandra.auth;
 
+import java.nio.ByteBuffer;
 import java.util.HashSet;
 import java.util.Set;
 
 import com.google.common.base.Objects;
 
 import org.apache.cassandra.config.DatabaseDescriptor;
+import org.apache.cassandra.db.marshal.AbstractType;
 
 /**
  * Returned from IAuthenticator#authenticate(), represents an authenticated user everywhere internally.
@@ -105,13 +107,13 @@ public class AuthenticatedUser
         return permissionsCache.getPermissions(this, resource);
     }
 
-    public Set<Object> getAttribute(String attributeName)
+    public Set<Object> getAttribute(String attributeName, AbstractType attrType)
     {
         Set<Object> ret = new HashSet<>();
 
         for(RoleResource role : Roles.getRoles(role))
         {
-            Object attr = role.getAttribute(attributeName);
+            Object attr = role.getAttribute(attributeName, attrType);
 
             if(attr != null)
             {

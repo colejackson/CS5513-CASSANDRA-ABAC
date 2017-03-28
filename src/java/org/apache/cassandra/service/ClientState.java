@@ -17,8 +17,10 @@
  */
 package org.apache.cassandra.service;
 
+import java.io.UnsupportedEncodingException;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
+import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
@@ -28,6 +30,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.cassandra.auth.*;
+import org.apache.cassandra.cql3.PolicyClause;
+import org.apache.cassandra.db.marshal.Int32Type;
+import org.apache.cassandra.db.marshal.ShortType;
+import org.apache.cassandra.db.marshal.UTF8Type;
 import org.apache.cassandra.schema.TableMetadata;
 import org.apache.cassandra.schema.TableMetadataRef;
 import org.apache.cassandra.config.DatabaseDescriptor;
@@ -429,7 +435,19 @@ public class ClientState
 
     public String decorateAbac(TableMetadata table, String cqlQuery)
     {
-        // TODO: Decorate Abac
+        if(user != null)
+        {
+            Set<Object> attr = user.getAttribute("test_test", UTF8Type.instance);
+
+            for(Object o : attr)
+            {
+                String s = (String) o;
+            }
+
+            String tableString = table.resource.getKeyspace() + '\'' + table.resource.getTable();
+
+            Set<PolicyClause> policies = DatabaseDescriptor.getPolicyCache().getPolicies(tableString, Permission.SELECT.name());
+        }
 
         logger.info("Decorating the query [{}], success.", cqlQuery);
 
@@ -438,10 +456,6 @@ public class ClientState
 
     public String decorateAbac(TableMetadataRef tableMetadataRef, String cqlQuery)
     {
-        // TODO: DecorateAbac
-
-        logger.info("Decorating the query [{}], success.", cqlQuery);
-
-        return cqlQuery;
+        return decorateAbac(tableMetadataRef.get(), cqlQuery);
     }
 }
