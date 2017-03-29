@@ -9,7 +9,7 @@ import org.apache.cassandra.db.marshal.AbstractType;
  */
 public class PolicyClause implements Serializable
 {
-    public static final String WHERE_PLACEHOLDER = "';;;'";
+    public static final String WHERE_PLACEHOLDER = ";;;";
 
     private final String attribute;
 
@@ -42,7 +42,9 @@ public class PolicyClause implements Serializable
 
     public String generateWhereClause()
     {
-        return null; // TODO: ABAC produce the clause that will be added to the Query for this rule.
+        return ((this.attributeTypeString.equalsIgnoreCase("text")) ? escape(WHERE_PLACEHOLDER) : WHERE_PLACEHOLDER)
+               + ' ' + getOperatorInverse(opString)
+               + ' ' + colIdString;
     }
 
     public AbstractType getAttributeType()
@@ -53,5 +55,35 @@ public class PolicyClause implements Serializable
     public String getAttributeName()
     {
         return attribute;
+    }
+
+    private String getOperatorInverse(String opString)
+    {
+        Operator input = Operator.valueOf(opString);
+
+        switch(input)
+        {
+            case EQ:
+                return Operator.NEQ.toString();
+            case LT:
+                return Operator.GT.toString();
+            case LTE:
+                return Operator.GTE.toString();
+            case GTE:
+                return Operator.LTE.toString();
+            case GT:
+                return Operator.LT.toString();
+            case IN:
+                return Operator.IS_NOT.toString() + ' ' + Operator.IN.toString();
+            case NEQ:
+                return Operator.EQ.toString();
+            default:
+                return opString;
+        }
+    }
+
+    private String escape(String input)
+    {
+        return '\'' + input + '\'';
     }
 }

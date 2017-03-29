@@ -107,18 +107,18 @@ public final class AbacProxy
         return !results.isEmpty();
     }
 
-    static Set<PolicyClause> getAllPoliciesOn(String tableName, String permissionString)
+    public static Set<PolicyClause> getAllPoliciesOn(String tableName, String permissionString)
     {
         Set<PolicyClause> ret = new HashSet<>();
 
-        String cqlString = String.format("SELECT obj FROM %s.%s WHERE cf = %s",
+        String cqlString = String.format("SELECT obj, type FROM %s.%s WHERE cf = %s",
                 SchemaConstants.AUTH_KEYSPACE_NAME,
                 AuthKeyspace.POLICIES,
                 escape(tableName));
 
         UntypedResultSet results = QueryProcessor.process(cqlString, ConsistencyLevel.LOCAL_ONE);
 
-        results.forEach((UntypedResultSet.Row r) ->
+        for(UntypedResultSet.Row r : results)
         {
             try(ObjectInputStream ois = new ObjectInputStream(new ByteArrayInputStream(r.getBlob("obj").array())))
             {
@@ -131,7 +131,7 @@ public final class AbacProxy
             {
                 throw new RuntimeException("Problem with deserializing policies.");
             }
-        });
+        }
 
         return ret;
     }

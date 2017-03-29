@@ -183,7 +183,7 @@ public class CassandraRoleManager implements IRoleManager
     }
 
     @Override
-    public ByteBuffer getRoleAttribute(RoleResource roleResource, String attributeName, AbstractType attrType)
+    public ByteBuffer getRoleAttribute(RoleResource roleResource, String attributeName)
     {
         String selectCql = String.format("SELECT attributes FROM %s.%s WHERE role = %s",
                 SchemaConstants.AUTH_KEYSPACE_NAME,
@@ -207,20 +207,7 @@ public class CassandraRoleManager implements IRoleManager
             return null;
         }
 
-        ByteBuffer ret = null;
-
-        try
-        {
-            ret = attrType.decompose(attributes.get(attributeName));
-        }
-        catch(Exception e)
-        {
-            logger.info("INFO: An attribute of the name [{}] on role [{}] was not of the expected type.",
-                        attributeName,
-                        roleResource.getRoleName());
-        }
-
-        return ret;
+        return attributes.get(attributeName);
     }
 
     public Set<Option> supportedOptions()

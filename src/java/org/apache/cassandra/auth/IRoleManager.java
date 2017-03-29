@@ -21,6 +21,7 @@ import java.nio.ByteBuffer;
 import java.util.Map;
 import java.util.Set;
 
+import org.apache.cassandra.cql3.CQL3Type;
 import org.apache.cassandra.db.marshal.AbstractType;
 import org.apache.cassandra.exceptions.ConfigurationException;
 import org.apache.cassandra.exceptions.RequestExecutionException;
@@ -43,7 +44,7 @@ public interface IRoleManager
      * @param attributeName the String representing an attributes name.
      * @return an object stored as a Role attribute.
      */
-    ByteBuffer getRoleAttribute(RoleResource roleResource, String attributeName, AbstractType attrType);
+    ByteBuffer getRoleAttribute(RoleResource roleResource, String attributeName);
 
     /**
      * Supported options for CREATE ROLE/ALTER ROLE (and

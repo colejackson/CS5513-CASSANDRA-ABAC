@@ -22,7 +22,9 @@ import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -433,28 +435,39 @@ public class ClientState
         return user.getPermissions(resource);
     }
 
-    public String decorateAbac(TableMetadata table, String cqlQuery) // TODO: ABAC - TEST THIS
+    public String decorateAbac(TableMetadata table, String cqlQuery)
     {
         String ret = cqlQuery;
 
-        if(user != null)
+        if(user != null && !cqlQuery.contains("INSERT INTO"))
         {
             String perm = cqlQuery.contains("SELECT ") ? "SELECT" : "MODIFY";
-            String tableString = table.resource.getKeyspace() + '\'' + table.resource.getTable();
+            String tableString = table.resource.getKeyspace() + '.' + table.resource.getTable();
 
-            Set<PolicyClause> policies = DatabaseDescriptor.getPolicyCache().getPolicies(tableString, perm);
+            Set<PolicyClause> policies = AbacProxy.getAllPoliciesOn(tableString, perm); // TODO: USE CACHE
 
             for(PolicyClause policy : policies)
             {
-                Set<ByteBuffer> attr = user.getAttribute(policy.getAttributeName(), policy.getAttributeType());
+                Set<ByteBuffer> attr = user.getAttribute(policy.getAttributeName());
 
                 Object maxValue = null;
 
                 for(ByteBuffer bytes : attr)
                 {
                     // NO WAY TO KNOW WHAT THIS OBJECT IS UNTIL RUNTIME;
+                    Object composed;
 
-                    Object composed = policy.getAttributeType().compose(bytes);
+                    try
+                    {
+                        composed = policy.getAttributeType().compose(bytes);
+                    }
+                    catch(Exception e)
+                    {
+                        throw new RuntimeException(String.format("Attribute [%s] of role [%s] did not match expected type [%s].",
+                                                                 policy.getAttributeName(),
+                                                                 user.getName(),
+                                                                 policy.getAttributeType().toString()));
+                    }
 
                     maxValue = compareObjects(maxValue, composed);
                 }
@@ -481,11 +494,60 @@ public class ClientState
 
     private Object compareObjects(Object previous_obj, Object new_obj)
     {
-        return previous_obj; // TODO: ABAC - FIX THIS
+        if(previous_obj == null)
+        {
+            return new_obj;
+        }
+
+        if(previous_obj instanceof String)
+        {
+            return previous_obj;
+        }
+
+        if(new_obj instanceof Comparable)
+        {
+            return ((Comparable) previous_obj).compareTo(new_obj) >= 0 ? previous_obj : new_obj;
+        }
+        else
+        {
+            return previous_obj;
+        }
     }
 
-    private String addWhereClause(String query, String whereClause)
+    private String addWhereClause(String input, String whereClause)
     {
-        return query; // TODO: ABAC - FIX THIS
+        String query = input;
+        query.replace(";", "");
+
+        List<String> tokens = Arrays.asList(query.split("\\s+"));
+
+        if(query.contains("WHERE"))
+        {
+            int index = tokens.indexOf("WHERE");
+
+            tokens.add(index + 1, whereClause + " AND");
+
+            StringBuilder ret = new StringBuilder();
+
+            for(String s : tokens)
+            {
+                ret.append(s).append(' ');
+            }
+
+            if(!query.contains("ALLOW FILTERING"))
+            {
+                tokens.add("ALLOW FILTERING;");
+            }
+            else
+            {
+                tokens.add(";");
+            }
+
+            return ret.toString();
+        }
+        else
+        {
+            return query;
+        }
     }
 }
