@@ -107,13 +107,13 @@ public class AuthenticatedUser
         return permissionsCache.getPermissions(this, resource);
     }
 
-    public Set<Object> getAttribute(String attributeName, AbstractType attrType)
+    public Set<ByteBuffer> getAttribute(String attributeName, AbstractType attrType)
     {
-        Set<Object> ret = new HashSet<>();
+        Set<ByteBuffer> ret = new HashSet<>();
 
         for(RoleResource role : Roles.getRoles(role))
         {
-            Object attr = role.getAttribute(attributeName, attrType);
+            ByteBuffer attr = role.getAttribute(attributeName, attrType);
 
             if(attr != null)
             {

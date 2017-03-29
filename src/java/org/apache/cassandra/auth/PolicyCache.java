@@ -29,6 +29,8 @@ public class PolicyCache extends AuthCache<Pair<String,String>, Set<PolicyClause
 
     public Set<PolicyClause> getPolicies(String tableName, String permString)
     {
+
+
         try
         {
             return get(Pair.create(tableName, permString));

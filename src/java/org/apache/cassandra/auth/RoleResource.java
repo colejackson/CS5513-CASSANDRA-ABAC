@@ -155,7 +155,7 @@ public class RoleResource implements IResource, Comparable<RoleResource>
         return level == Level.ROOT ? ROOT_LEVEL_PERMISSIONS : ROLE_LEVEL_PERMISSIONS;
     }
 
-    public Object getAttribute(String attributeName, AbstractType attrType)
+    public ByteBuffer getAttribute(String attributeName, AbstractType attrType)
     {
         return DatabaseDescriptor.getRoleManager().getRoleAttribute(this, attributeName, attrType);
     }

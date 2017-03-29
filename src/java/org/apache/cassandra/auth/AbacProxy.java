@@ -33,21 +33,24 @@ public final class AbacProxy
                     new ColumnSpecification(KS, CF, new ColumnIdentifier("description", true), UTF8Type.instance),
                     new ColumnSpecification(KS, CF, new ColumnIdentifier("type", true), UTF8Type.instance));
 
-    public static void createPolicy(String policyName, String cfName, Set<Permission> perms, PolicyClause policy)
+    public static void createPolicy(String policyName,
+                                    String cfName,
+                                    Set<Permission> perms,
+                                    PolicyClause policy)
     {
-        String type;
+        String perm;
 
         if(perms.size() > 1)
         {
-            type = "ALL";
+            perm = "ALL";
         }
         else if(perms.contains(Permission.SELECT))
         {
-            type = "SELECT";
+            perm = "SELECT";
         }
         else
         {
-            type = "MODIFY";
+            perm = "MODIFY";
         }
 
         ByteArrayOutputStream out = new ByteArrayOutputStream();
@@ -59,7 +62,7 @@ public final class AbacProxy
         }
         catch (IOException e)
         {
-            e.printStackTrace();
+            throw new RuntimeException("Failed to stream object output.");
         }
 
         String cqlString = String.format("INSERT INTO %s.%s (%s, %s, %s, %s, %s) VALUES (%s, %s, %s, %s, %s)",
@@ -74,7 +77,7 @@ public final class AbacProxy
                 escape(cfName),
                 escape(policy.toString()),
                 "0x" + DatatypeConverter.printHexBinary(out.toByteArray()),
-                escape(type));
+                escape(perm));
 
         QueryProcessor.process(cqlString, ConsistencyLevel.LOCAL_ONE);
     }
@@ -117,11 +120,11 @@ public final class AbacProxy
 
         results.forEach((UntypedResultSet.Row r) ->
         {
-            try
+            try(ObjectInputStream ois = new ObjectInputStream(new ByteArrayInputStream(r.getBlob("obj").array())))
             {
-                if(r.getString("type").equalsIgnoreCase(permissionString))
+                if("ALL".equalsIgnoreCase(permissionString) || r.getString("type").equalsIgnoreCase(permissionString))
                 {
-                    ret.add((PolicyClause) (new ObjectInputStream(new ByteArrayInputStream(r.getBlob("obj").array())).readObject()));
+                    ret.add((PolicyClause) ois.readObject());
                 }
             }
             catch (IOException | ClassNotFoundException c)

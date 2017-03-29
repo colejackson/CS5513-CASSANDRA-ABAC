@@ -134,7 +134,7 @@ public class RoleOptionsTest
     {
         return new IRoleManager()
         {
-            public Object getRoleAttribute(RoleResource roleResource, String attributeName, AbstractType attrType)
+            public ByteBuffer getRoleAttribute(RoleResource roleResource, String attributeName, AbstractType attrType)
             {
                 return null;
             }

@@ -43,7 +43,7 @@ public interface IRoleManager
      * @param attributeName the String representing an attributes name.
      * @return an object stored as a Role attribute.
      */
-    Object getRoleAttribute(RoleResource roleResource, String attributeName, AbstractType attrType);
+    ByteBuffer getRoleAttribute(RoleResource roleResource, String attributeName, AbstractType attrType);
 
     /**
      * Supported options for CREATE ROLE/ALTER ROLE (and

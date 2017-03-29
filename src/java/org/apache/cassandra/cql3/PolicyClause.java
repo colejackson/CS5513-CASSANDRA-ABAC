@@ -2,74 +2,56 @@ package org.apache.cassandra.cql3;
 
 import java.io.Serializable;
 
+import org.apache.cassandra.db.marshal.AbstractType;
+
 /**
  * Created by coleman on 3/27/17.
  */
 public class PolicyClause implements Serializable
 {
+    public static final String WHERE_PLACEHOLDER = "';;;'";
+
     private final String attribute;
 
-    private transient Operator operator;
-    private String opString;
+    private final String attributeTypeString;
 
-    private transient ColumnIdentifier colId;
+    private final String opString;
+
     private final String colIdString;
 
-    private boolean containsNullLiteral = false;
-
-    public PolicyClause(String attribute, Operator op, ColumnIdentifier colId)
+    public PolicyClause(String attribute, CQL3Type nativeType, Operator op, ColumnIdentifier colId)
     {
         this.attribute = attribute;
 
-        this.operator = op;
-        this.opString = this.operator.toString();
+        this.attributeTypeString = nativeType.toString();
 
-        this.colId = colId;
-        this.colIdString = this.colId.toCQLString();
-    }
+        this.opString = op.toString();
 
-    public PolicyClause(String attribute, Operator op)
-    {
-        this.attribute = attribute;
-
-        this.operator = op;
-        this.opString = this.operator.toString();
-
-        this.containsNullLiteral = true;
-        this.colIdString = this.colId.toCQLString();
-    }
-
-    public PolicyClause(String attribute, ColumnIdentifier colId)
-    {
-        this.attribute = attribute;
-
-        this.colId = colId;
-        this.colIdString = this.colId.toString();
+        this.colIdString = colId.toCQLString();
     }
 
     @Override
     public String toString()
     {
-        if(operator == Operator.CONTAINS)
-        {
-            return String.format("Column value %s contains attribute %s value.", colIdString, attribute);
-        }
-        else if(operator == null)
-        {
-            return String.format("Attribute %s value is in column %s", attribute, colIdString);
-        }
-        else if(containsNullLiteral)
-        {
-            return String.format("Attribute %s value is not null", attribute);
-        }
-        else
-        {
-            return String.format("Column value %s is %s attribute %s value", colIdString, opString, attribute);
-        }
+        return String.format("Attribute [%s] %s value is %s column %s.",
+                             attribute,
+                             attributeTypeString,
+                             opString,
+                             colIdString);
     }
 
     public String generateWhereClause()
     {
         return null; // TODO: ABAC produce the clause that will be added to the Query for this rule.
+    }
+
+    public AbstractType getAttributeType()
+    {
+        return CQL3Type.Native.match(attributeTypeString).getType();
+    }
+
+    public String getAttributeName()
+    {
+        return attribute;
     }
 }

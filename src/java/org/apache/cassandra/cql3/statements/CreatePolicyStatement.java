@@ -4,6 +4,7 @@ import org.apache.cassandra.auth.AbacProxy;
 import org.apache.cassandra.auth.AuthenticatedUser;
 import org.apache.cassandra.auth.Permission;
 import org.apache.cassandra.cql3.CFName;
+import org.apache.cassandra.cql3.CQL3Type;
 import org.apache.cassandra.cql3.PolicyClause;
 import org.apache.cassandra.cql3.PolicyName;
 import org.apache.cassandra.exceptions.InvalidRequestException;
@@ -20,12 +21,15 @@ import java.util.Set;
  */
 public class CreatePolicyStatement extends AbacStatement
 {
-    private PolicyName policyName;
-    private CFName cfName;
-    private Set<Permission> perms;
-    private PolicyClause policyClause;
+    private final PolicyName policyName;
+    private final CFName cfName;
+    private final Set<Permission> perms;
+    private final PolicyClause policyClause;
 
-    public CreatePolicyStatement(PolicyName policyName, CFName cfname, Set<Permission> perms, PolicyClause policyClause)
+    public CreatePolicyStatement(PolicyName policyName,
+                                 CFName cfname,
+                                 Set<Permission> perms,
+                                 PolicyClause policyClause)
     {
         super(cfname);
 

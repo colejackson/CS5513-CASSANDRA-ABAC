@@ -1412,10 +1412,9 @@ plcyName[PolicyName pn]
     ;
 
 policyClause returns [PolicyClause pc] // TODO: Test This
-    : attr=STRING_LITERAL type=relationType col=ident { $pc = new PolicyClause($attr.text, type, col); }
-    | attr=STRING_LITERAL K_IS K_NOT K_NULL { $pc = new PolicyClause($attr.text, Operator.IS_NOT); }
-    | attr=STRING_LITERAL K_IN col=ident { $pc = new PolicyClause($attr.text, col); }
-    | attr=STRING_LITERAL cont=containsOperator col=ident { $pc = new PolicyClause($attr.text, cont, col); }
+    : attr=STRING_LITERAL nt=native_type type=relationType col=ident { $pc = new PolicyClause($attr.text, nt, type, col); }
+    | attr=STRING_LITERAL nt=native_type K_IN col=ident { $pc = new PolicyClause($attr.text, nt, Operator.IN, col); }
+    | attr=STRING_LITERAL nt=native_type cont=containsOperator col=ident { $pc = new PolicyClause($attr.text, nt, cont, col); }
     ;
 
 constant returns [Constants.Literal constant]

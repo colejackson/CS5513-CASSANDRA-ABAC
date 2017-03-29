@@ -19,6 +19,7 @@ package org.apache.cassandra.cql3;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import org.slf4j.Logger;
@@ -114,6 +115,15 @@ public interface CQL3Type
         public String toString()
         {
             return super.toString().toLowerCase();
+        }
+
+        public static Native match(String name)
+        {
+            final Native[] ret = new Native[1];
+
+            Arrays.stream(Native.values()).forEach(nat -> {if(nat.toString().equalsIgnoreCase(name)) ret[0] = nat;});
+
+            return ret[0];
         }
     }
 

@@ -433,29 +433,59 @@ public class ClientState
         return user.getPermissions(resource);
     }
 
-    public String decorateAbac(TableMetadata table, String cqlQuery)
+    public String decorateAbac(TableMetadata table, String cqlQuery) // TODO: ABAC - TEST THIS
     {
+        String ret = cqlQuery;
+
         if(user != null)
         {
-            Set<Object> attr = user.getAttribute("test_test", UTF8Type.instance);
-
-            for(Object o : attr)
-            {
-                String s = (String) o;
-            }
-
+            String perm = cqlQuery.contains("SELECT ") ? "SELECT" : "MODIFY";
             String tableString = table.resource.getKeyspace() + '\'' + table.resource.getTable();
 
-            Set<PolicyClause> policies = DatabaseDescriptor.getPolicyCache().getPolicies(tableString, Permission.SELECT.name());
+            Set<PolicyClause> policies = DatabaseDescriptor.getPolicyCache().getPolicies(tableString, perm);
+
+            for(PolicyClause policy : policies)
+            {
+                Set<ByteBuffer> attr = user.getAttribute(policy.getAttributeName(), policy.getAttributeType());
+
+                Object maxValue = null;
+
+                for(ByteBuffer bytes : attr)
+                {
+                    // NO WAY TO KNOW WHAT THIS OBJECT IS UNTIL RUNTIME;
+
+                    Object composed = policy.getAttributeType().compose(bytes);
+
+                    maxValue = compareObjects(maxValue, composed);
+                }
+
+                if(maxValue == null)
+                {
+                    throw new RuntimeException(String.format("Attribute %s does not exist for role %s.",
+                                                             policy.getAttributeName(),
+                                                             user.getName()));
+                }
+
+                ret = addWhereClause(ret, policy.generateWhereClause().replace(PolicyClause.WHERE_PLACEHOLDER,
+                                                                               maxValue.toString()));
+            }
         }
 
-        logger.info("Decorating the query [{}], success.", cqlQuery);
-
-        return cqlQuery;
+        return ret;
     }
 
     public String decorateAbac(TableMetadataRef tableMetadataRef, String cqlQuery)
     {
         return decorateAbac(tableMetadataRef.get(), cqlQuery);
+    }
+
+    private Object compareObjects(Object previous_obj, Object new_obj)
+    {
+        return previous_obj; // TODO: ABAC - FIX THIS
+    }
+
+    private String addWhereClause(String query, String whereClause)
+    {
+        return query; // TODO: ABAC - FIX THIS
     }
 }
