@@ -44,6 +44,7 @@ public final class AuthKeyspace
     public static final String ROLE_MEMBERS = "role_members";
     public static final String ROLE_PERMISSIONS = "role_permissions";
     public static final String RESOURCE_ROLE_INDEX = "resource_role_permissons_index";
+    public static final String ATTRIBUTES = "attributes";
 
     public static final String POLICIES = "policies";
 
@@ -59,6 +60,15 @@ public final class AuthKeyspace
             + "obj blob,"
             + "type text,"
             + "PRIMARY KEY(cf, policy))");
+
+    private static final TableMetadata Attributes =
+    parse(ATTRIBUTES,
+          "abac attribute definitions",
+          "CREATE TABLE %s ("
+          + "attribute text,"
+          + "type text,"
+          + "ordering text,"
+          + "PRIMARY KEY(attribute))");
 
     private static final TableMetadata Roles =
         parse(ROLES,
@@ -111,6 +121,6 @@ public final class AuthKeyspace
     {
         return KeyspaceMetadata.create(SchemaConstants.AUTH_KEYSPACE_NAME,
                                        KeyspaceParams.simple(1),
-                                       Tables.of(Roles, RoleMembers, RolePermissions, ResourceRoleIndex, Policies));
+                                       Tables.of(Roles, RoleMembers, RolePermissions, ResourceRoleIndex, Policies, Attributes));
     }
 }

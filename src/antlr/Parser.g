@@ -246,6 +246,9 @@ cqlStatement returns [ParsedStatement stmt]
     | st41=createPolicyStatement           { $stmt = st41; }
     | st42=dropPolicyStatement             { $stmt = st42; }
     | st43=listPoliciesStatement           { $stmt = st43; }
+    | st44=createAttributeStatement        { $stmt = st44; }
+    | st45=dropAttributeStatement          { $stmt = st45; }
+    | st46=listAttributesStatement         { $stmt = st46; }
     ;
 
 /*
@@ -1012,7 +1015,7 @@ truncateStatement returns [TruncateStatement stmt]
  * CREATE POLICY <name>
  * ON <table>
  * DENY <functionOrAll>
- * IF ATTRIBUTE <attribute> <function> <valueOrColumn>; // TODO: Need to test.
+ * IF ATTRIBUTE <attribute> <function> <valueOrColumn>;
  */
 createPolicyStatement returns [CreatePolicyStatement stmt]
     : K_CREATE K_POLICY
@@ -1027,7 +1030,7 @@ createPolicyStatement returns [CreatePolicyStatement stmt]
     ;
 
 /**
- * DROP POLICY <name> ON <table>; // TODO: Need to test.
+ * DROP POLICY <name> ON <table>;
  */
 dropPolicyStatement returns [DropPolicyStatement stmt]
     : K_DROP K_POLICY
@@ -1038,12 +1041,46 @@ dropPolicyStatement returns [DropPolicyStatement stmt]
     ;
 
 /**
- * LIST ALL POLICIES ON <table>; // TODO: Need to test.
+ * LIST ALL POLICIES ON <table>;
  */
 listPoliciesStatement returns [ListPoliciesStatement stmt]
     : K_LIST K_ALL K_POLICIES K_ON
           name=columnFamilyName
       { $stmt = new ListPoliciesStatement(name); }
+    ;
+
+/**
+ * CREATE ATTRIBUTE <name> <type> WITH ORDERING <ordering>
+ */
+createAttributeStatement returns [CreateAttributeStatement stmt]
+    @init
+    {
+        AttributeOrdering.Builder orderingBuilder = AttributeOrdering.getBuilder();
+        orderingBuilder.setKind(AttributeOrdering.Kind.STANDARD);
+    }
+    : K_CREATE K_ATTRIBUTE
+        name=attributeName
+        type=attribute_type { orderingBuilder.setType($type); }
+      (K_WITH K_ORDERING
+        order=attributeOrdering[orderingBuilder])?
+      { $stmt = new CreateAttributeStatement(name, orderingBuilder.build(), type); }
+    ;
+
+/**
+ * DROP ATTRIBUTE <name>
+ */
+
+dropAttributeStatement returns [DropAttributeStatement stmt]
+    : K_DROP K_ATTRIBUTE name=attributeName { $stmt = new DropAttributeStatement(name); }
+    ;
+
+/**
+ * LIST ALL ATTRIBUTES
+ */
+
+listAttributesStatement returns [ListAttributesStatement stmt]
+    : K_LIST (K_ALL)? K_ATTRIBUTES
+    { $stmt = new ListAttributesStatement(); }
     ;
 
 /**
@@ -1374,6 +1411,14 @@ policyName returns [PolicyName pn]
     : plcyName[pol] { $pn = pol; }
     ;
 
+attributeName returns [String name]
+    : t=IDENT              { $name = $t.text; }
+    | s=STRING_LITERAL     { $name = $s.text; }
+    | t=QUOTED_NAME        { $name = $t.text; }
+    | k=unreserved_keyword { $name = k; }
+    | QMARK {addRecognitionError("Bind variables cannot be used for attribute names");}
+    ;
+
 ksName[KeyspaceElementName name]
     : t=IDENT              { $name.setKeyspace($t.text, false); }
     | t=QUOTED_NAME        { $name.setKeyspace($t.text, true); }
@@ -1411,7 +1456,7 @@ plcyName[PolicyName pn]
     | QMARK {addRecognitionError("Bind variables cannot be used for policy names");}
     ;
 
-policyClause returns [PolicyClause pc] // TODO: Test This
+policyClause returns [PolicyClause pc]
     : attr=STRING_LITERAL nt=native_type type=relationType col=ident { $pc = new PolicyClause($attr.text, nt, type, col); }
     | attr=STRING_LITERAL nt=native_type K_IN col=ident { $pc = new PolicyClause($attr.text, nt, Operator.IN, col); }
     | attr=STRING_LITERAL nt=native_type cont=containsOperator col=ident { $pc = new PolicyClause($attr.text, nt, cont, col); }
@@ -1782,6 +1827,25 @@ native_type returns [CQL3Type t]
     | K_TIME      { $t = CQL3Type.Native.TIME; }
     ;
 
+attribute_type returns [CQLType t]
+    : K_TEXT    { $t = CQL3Type.Native.TEXT; }
+    | K_INT     { $t = CQL3Type.Native.INT; }
+    | K_FLOAT   { $t = CQL3Type.Native.FLOAT; }
+    | K_TIMESTAMP    { $t = CQL3Type.Native.TIMESTAMP; }
+    | K_COUNTER { $t = CQL3Type.Native.COUNTER; }
+    | K_BOOLEAN { $t = CQL3Type.Native.BOOLEAN; }
+    ;
+
+attributeOrdering[AttributeOrdering.Builder orderBuilder]
+    : K_STANDARD { orderBuilder.setKind(AttributeOrdering.Kind.STANDARD); }
+    | K_REVERSE { orderBuilder.setKind(AttributeOrdering.Kind.REVERSE); }
+    | K_CUSTOM customOrdering=STRING_LITERAL
+        {
+            orderBuilder.setKind(AttributeOrdering.Kind.CUSTOM);
+            orderBuilder.setCustomClass($customOrdering.text);
+        }
+    ;
+
 collection_type returns [CQL3Type.Raw pt]
     : K_MAP  '<' t1=comparatorType ',' t2=comparatorType '>'
         {
@@ -1882,5 +1946,8 @@ basic_unreserved_keyword returns [String str]
         | K_POLICY
         | K_POLICIES
         | K_DENY
+        | K_ORDERING
+        | K_REVERSE
+        | K_STANDARD
         ) { $str = $k.text; }
     ;
