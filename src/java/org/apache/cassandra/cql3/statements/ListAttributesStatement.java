@@ -18,7 +18,10 @@
 
 package org.apache.cassandra.cql3.statements;
 
+import org.apache.cassandra.auth.AbacProxy;
 import org.apache.cassandra.auth.Attribute;
+import org.apache.cassandra.auth.AuthenticatedUser;
+import org.apache.cassandra.auth.Permission;
 import org.apache.cassandra.exceptions.InvalidRequestException;
 import org.apache.cassandra.exceptions.RequestExecutionException;
 import org.apache.cassandra.exceptions.RequestValidationException;
@@ -31,20 +34,25 @@ import org.apache.cassandra.transport.messages.ResultMessage;
  */
 public class ListAttributesStatement extends AuthenticationStatement
 {
-    private Attribute attribute;
-
     public void checkAccess(ClientState state) throws UnauthorizedException, InvalidRequestException
     {
+        AuthenticatedUser user = state.getUser();
 
+        if(user.isSuper())
+        {
+            return;
+        }
+
+        state.hasAllKeyspacesAccess(Permission.DESCRIBE);
     }
 
     public void validate(ClientState state) throws RequestValidationException
     {
-
+        state.ensureNotAnonymous();
     }
 
     public ResultMessage execute(ClientState state) throws RequestExecutionException, RequestValidationException
     {
-        return null;
+        return AbacProxy.listAttributes();
     }
 }

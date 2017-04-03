@@ -904,27 +904,4 @@ public abstract class ModificationStatement implements CQLStatement
             return rawId.prepare(metadata);
         }
     }
-
-    @Override
-    public String decorateAbac(ClientState clientState, String cqlQuery)
-    {
-        if(metadata.isView())
-        {
-            int c;
-
-            TableMetadataRef tableMetadataRef = View.findBaseTable(keyspace(), columnFamily());
-            if(tableMetadataRef != null)
-            {
-                return clientState.decorateAbac(tableMetadataRef, cqlQuery);
-            }
-            else
-            {
-                return null;
-            }
-        }
-        else
-        {
-            return clientState.decorateAbac(metadata, cqlQuery);
-        }
-    }
 }

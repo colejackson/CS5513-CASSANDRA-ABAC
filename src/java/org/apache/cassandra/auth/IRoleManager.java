@@ -17,15 +17,14 @@
  */
 package org.apache.cassandra.auth;
 
-import java.nio.ByteBuffer;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import org.apache.cassandra.cql3.CQL3Type;
-import org.apache.cassandra.db.marshal.AbstractType;
 import org.apache.cassandra.exceptions.ConfigurationException;
 import org.apache.cassandra.exceptions.RequestExecutionException;
 import org.apache.cassandra.exceptions.RequestValidationException;
+import org.apache.cassandra.transport.messages.ResultMessage;
 
 /**
  * Responsible for managing roles (which also includes what
@@ -37,14 +36,13 @@ public interface IRoleManager
 {
 
     /**
-     * For a given role get the value of the attribute from the
-     * attribute string.
-     *
-     * @param roleResource a resource object.
-     * @param attributeName the String representing an attributes name.
-     * @return an object stored as a Role attribute.
+     * Attribute methods, should document better later.
      */
-    ByteBuffer getRoleAttribute(RoleResource roleResource, String attributeName);
+    void addAttribute(AttributeValue attribute, RoleResource role);
+    List<AttributeValue> getAttributes(RoleResource roleResource);
+    boolean hasAttribute(AttributeValue attribute, RoleResource role);
+    ResultMessage listAttributes(RoleResource role);
+    void removeAttribute(RoleResource role, AttributeValue attributeValue);
 
     /**
      * Supported options for CREATE ROLE/ALTER ROLE (and

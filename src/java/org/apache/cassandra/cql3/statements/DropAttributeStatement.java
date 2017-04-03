@@ -18,7 +18,10 @@
 
 package org.apache.cassandra.cql3.statements;
 
+import org.apache.cassandra.auth.AbacProxy;
 import org.apache.cassandra.auth.Attribute;
+import org.apache.cassandra.auth.AuthenticatedUser;
+import org.apache.cassandra.auth.Permission;
 import org.apache.cassandra.exceptions.InvalidRequestException;
 import org.apache.cassandra.exceptions.RequestExecutionException;
 import org.apache.cassandra.exceptions.RequestValidationException;
@@ -31,25 +34,39 @@ import org.apache.cassandra.transport.messages.ResultMessage;
  */
 public class DropAttributeStatement extends AuthenticationStatement
 {
-    private Attribute attribute;
+    private final Attribute attribute;
 
-    public DropAttributeStatement(String attributeName)
+    public DropAttributeStatement(Attribute attribute)
     {
-
+        this.attribute = attribute;
     }
 
     public void checkAccess(ClientState state) throws UnauthorizedException, InvalidRequestException
     {
+        AuthenticatedUser user = state.getUser();
 
+        if(user.isSuper())
+        {
+            return;
+        }
+
+        state.hasAllKeyspacesAccess(Permission.DROP);
     }
 
     public void validate(ClientState state) throws RequestValidationException
     {
+        state.ensureNotAnonymous();
 
+        if(!AbacProxy.attributeExists(attribute))
+        {
+            throw new InvalidRequestException(String.format("Attribute {%s} does not exist.", attribute.attributeName));
+        }
     }
 
     public ResultMessage execute(ClientState state) throws RequestExecutionException, RequestValidationException
     {
+        AbacProxy.dropAttribute(attribute);
+
         return null;
     }
 }

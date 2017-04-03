@@ -18,9 +18,50 @@
 
 package org.apache.cassandra.cql3.statements;
 
+import org.apache.cassandra.auth.AuthenticatedUser;
+import org.apache.cassandra.auth.Permission;
+import org.apache.cassandra.auth.RoleResource;
+import org.apache.cassandra.config.DatabaseDescriptor;
+import org.apache.cassandra.exceptions.InvalidRequestException;
+import org.apache.cassandra.exceptions.RequestExecutionException;
+import org.apache.cassandra.exceptions.RequestValidationException;
+import org.apache.cassandra.exceptions.UnauthorizedException;
+import org.apache.cassandra.service.ClientState;
+import org.apache.cassandra.transport.messages.ResultMessage;
+
 /**
  * Created by coleman on 4/2/17.
  */
-public class ListAttributeOnRoleStatement
+public class ListAttributeOnRoleStatement extends AuthenticationStatement
 {
+    private final RoleResource role;
+
+    public ListAttributeOnRoleStatement(RoleResource role)
+    {
+        this.role = role;
+    }
+
+    public void checkAccess(ClientState state) throws UnauthorizedException, InvalidRequestException
+    {
+        AuthenticatedUser user = state.getUser();
+
+        if(user.isSuper())
+        {
+            return;
+        }
+
+        state.ensureHasPermission(Permission.DESCRIBE, role);
+    }
+
+    public void validate(ClientState state) throws RequestValidationException
+    {
+        state.ensureNotAnonymous();
+        if (!DatabaseDescriptor.getRoleManager().isExistingRole(role))
+            throw new InvalidRequestException(String.format("%s doesn't exist", role.getRoleName()));
+    }
+
+    public ResultMessage execute(ClientState state) throws RequestExecutionException, RequestValidationException
+    {
+        return DatabaseDescriptor.getRoleManager().listAttributes(role);
+    }
 }

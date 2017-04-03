@@ -107,23 +107,6 @@ public class AuthenticatedUser
         return permissionsCache.getPermissions(this, resource);
     }
 
-    public Set<ByteBuffer> getAttribute(String attributeName)
-    {
-        Set<ByteBuffer> ret = new HashSet<>();
-
-        for(RoleResource role : Roles.getRoles(role))
-        {
-            ByteBuffer attr = role.getAttribute(attributeName);
-
-            if(attr != null)
-            {
-                ret.add(attr);
-            }
-        }
-
-        return ret;
-    }
-
     @Override
     public String toString()
     {

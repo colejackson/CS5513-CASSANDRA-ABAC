@@ -17,7 +17,6 @@
  */
 package org.apache.cassandra.auth;
 
-import java.nio.ByteBuffer;
 import java.util.*;
 import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
@@ -26,7 +25,6 @@ import com.google.common.base.*;
 import com.google.common.base.Objects;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
-import org.apache.cassandra.db.marshal.AbstractType;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -34,7 +32,6 @@ import org.slf4j.LoggerFactory;
 import org.apache.cassandra.concurrent.ScheduledExecutors;
 import org.apache.cassandra.config.Config;
 import org.apache.cassandra.config.DatabaseDescriptor;
-import org.apache.cassandra.db.marshal.BytesType;
 import org.apache.cassandra.schema.Schema;
 import org.apache.cassandra.schema.SchemaConstants;
 import org.apache.cassandra.cql3.*;
@@ -182,32 +179,29 @@ public class CassandraRoleManager implements IRoleManager
         }
     }
 
-    @Override
-    public ByteBuffer getRoleAttribute(RoleResource roleResource, String attributeName)
+    public void addAttribute(AttributeValue attribute, RoleResource role)
     {
-        String selectCql = String.format("SELECT attributes FROM %s.%s WHERE role = %s",
-                SchemaConstants.AUTH_KEYSPACE_NAME,
-                AuthKeyspace.ROLES,
-                '\'' + roleResource.getRoleName().replace("'", "''") + '\'');
 
-        UntypedResultSet results = process(selectCql, consistencyForRole(roleResource.getRoleName()));
+    }
 
-        if(results.isEmpty())
-        {
-            return null;
-        }
+    public List<AttributeValue> getAttributes(RoleResource roleResource)
+    {
+        return null;
+    }
 
-        Map<String, ByteBuffer> attributes =
-                results.one().getMap("attributes",
-                        UTF8Type.instance,
-                        BytesType.instance);
+    public boolean hasAttribute(AttributeValue attribute, RoleResource role)
+    {
+        return false;
+    }
 
-        if(attributes == null)
-        {
-            return null;
-        }
+    public ResultMessage listAttributes(RoleResource role)
+    {
+        return null;
+    }
 
-        return attributes.get(attributeName);
+    public void removeAttribute(RoleResource role, AttributeValue attributeValue)
+    {
+
     }
 
     public Set<Option> supportedOptions()

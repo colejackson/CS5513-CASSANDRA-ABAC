@@ -32,7 +32,7 @@ public final class AbacProxy
 
     public static List<Policy> getPolicies(TableMetadata table) {return null;}
 
-    public boolean policyExists(Policy policy) {return false;}
+    public static boolean policyExists(Policy policy) {return false;}
 
     public static void createAttribute(Attribute attribute) {}
 

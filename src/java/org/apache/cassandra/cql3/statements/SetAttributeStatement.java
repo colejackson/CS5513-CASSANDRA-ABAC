@@ -20,10 +20,11 @@ package org.apache.cassandra.cql3.statements;
 
 import org.apache.cassandra.auth.AbacProxy;
 import org.apache.cassandra.auth.Attribute;
-import org.apache.cassandra.auth.AttributeOrdering;
+import org.apache.cassandra.auth.AttributeValue;
 import org.apache.cassandra.auth.AuthenticatedUser;
 import org.apache.cassandra.auth.Permission;
-import org.apache.cassandra.cql3.CQL3Type;
+import org.apache.cassandra.auth.RoleResource;
+import org.apache.cassandra.config.DatabaseDescriptor;
 import org.apache.cassandra.exceptions.InvalidRequestException;
 import org.apache.cassandra.exceptions.RequestExecutionException;
 import org.apache.cassandra.exceptions.RequestValidationException;
@@ -32,15 +33,19 @@ import org.apache.cassandra.service.ClientState;
 import org.apache.cassandra.transport.messages.ResultMessage;
 
 /**
- * Created by coleman on 3/30/17.
+ * Created by coleman on 4/2/17.
  */
-public class CreateAttributeStatement extends AuthenticationStatement
+public class SetAttributeStatement extends AuthenticationStatement
 {
-    private final Attribute attribute;
+    private final AttributeValue attribute;
 
-    public CreateAttributeStatement(Attribute attribute)
+    private final RoleResource role;
+
+    public SetAttributeStatement(AttributeValue attribute, RoleResource role)
     {
         this.attribute = attribute;
+
+        this.role = role;
     }
 
     public void checkAccess(ClientState state) throws UnauthorizedException, InvalidRequestException
@@ -52,22 +57,27 @@ public class CreateAttributeStatement extends AuthenticationStatement
             return;
         }
 
-        state.hasAllKeyspacesAccess(Permission.CREATE);
+        state.ensureHasPermission(Permission.ALTER, role);
     }
 
     public void validate(ClientState state) throws RequestValidationException
     {
         state.ensureNotAnonymous();
 
-        if(AbacProxy.attributeExists(attribute))
+        if(!DatabaseDescriptor.getRoleManager().isExistingRole(role))
         {
-            throw new InvalidRequestException(String.format("Attribute {%s} already exists.", attribute.attributeName));
+            throw new InvalidRequestException(String.format("Role {%s} does not exist.", role.getRoleName()));
+        }
+
+        if(!AbacProxy.attributeExists(attribute.toAttribute()))
+        {
+            throw new InvalidRequestException(String.format("Attribute {%s} does not exist.", attribute.attributeName));
         }
     }
 
     public ResultMessage execute(ClientState state) throws RequestExecutionException, RequestValidationException
     {
-        AbacProxy.createAttribute(attribute);
+        DatabaseDescriptor.getRoleManager().addAttribute(attribute, role);
 
         return null;
     }

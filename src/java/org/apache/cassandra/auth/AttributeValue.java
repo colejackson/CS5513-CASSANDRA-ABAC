@@ -26,9 +26,9 @@ import org.apache.cassandra.cql3.Term;
  */
 public class AttributeValue
 {
-    private Term.Raw value;
+    public final Term.Raw value;
 
-    private String attributeName;
+    public final String attributeName;
 
     public AttributeValue(String attributeName, Term.Raw value)
     {
@@ -54,5 +54,10 @@ public class AttributeValue
         }
 
         return true;
+    }
+
+    public Attribute toAttribute()
+    {
+        return Attribute.getBuilder().setName(attributeName).build();
     }
 }

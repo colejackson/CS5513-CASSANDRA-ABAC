@@ -57,16 +57,4 @@ public abstract class AbacStatement extends CFStatement implements CQLStatement
         }
         return resource;
     }
-
-    /**
-     * Not required for ABAC typed statements.
-     * @param clientState
-     * @param cqlQuery
-     * @return
-     */
-    @Override
-    public String decorateAbac(ClientState clientState, String cqlQuery)
-    {
-        return null;
-    }
 }

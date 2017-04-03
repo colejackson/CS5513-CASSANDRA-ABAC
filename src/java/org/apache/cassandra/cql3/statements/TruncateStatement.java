@@ -88,14 +88,4 @@ public class TruncateStatement extends CFStatement implements CQLStatement
         }
         return null;
     }
-
-    /**
-     * Doesn't require any ABAC processing because truncate statements are not
-     * eligible for ABAC.
-     */
-    @Override
-    public String decorateAbac(ClientState clientState, String cqlQuery)
-    {
-        return null;
-    }
 }

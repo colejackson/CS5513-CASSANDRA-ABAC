@@ -3,6 +3,7 @@ package org.apache.cassandra.cql3.statements;
 import org.apache.cassandra.auth.AbacProxy;
 import org.apache.cassandra.auth.AuthenticatedUser;
 import org.apache.cassandra.auth.Permission;
+import org.apache.cassandra.auth.Policy;
 import org.apache.cassandra.cql3.CFName;
 import org.apache.cassandra.cql3.relations.PolicyRelation;
 import org.apache.cassandra.exceptions.InvalidRequestException;
@@ -19,22 +20,15 @@ import java.util.Set;
  */
 public class CreatePolicyStatement extends AbacStatement
 {
-    private final PolicyName policyName;
+    private final Policy policy;
     private final CFName cfName;
-    private final Set<Permission> perms;
-    private final PolicyRelation policyRelation;
 
-    public CreatePolicyStatement(PolicyName policyName,
-                                 CFName cfname,
-                                 Set<Permission> perms,
-                                 PolicyRelation policyRelation)
+    public CreatePolicyStatement(Policy policy, CFName cfname)
     {
         super(cfname);
 
-        this.policyName = policyName;
+        this.policy = policy;
         this.cfName = cfname;
-        this.perms = perms;
-        this.policyRelation = policyRelation;
     }
 
     @Override
@@ -58,19 +52,18 @@ public class CreatePolicyStatement extends AbacStatement
     {
         state.ensureNotAnonymous();
 
-        if(AbacProxy.policyExists(cfName.getKeyspace() + '.' + cfName.getColumnFamily(), policyName.getName()))
+        if(AbacProxy.policyExists(policy))
         {
-            throw new InvalidRequestException("A policy with this name already exists");
+            throw new InvalidRequestException(String.format("A policy {%s} already exists on table {%s}",
+                                                            policy.policyName,
+                                                            cfName.getColumnFamily()));
         }
     }
 
     @Override
     public ResultMessage execute(ClientState state) throws RequestValidationException, RequestExecutionException
     {
-        AbacProxy.createPolicy(policyName.getName(),
-                               cfName.getKeyspace() + "." + cfName.getColumnFamily(),
-                               perms,
-                               policyRelation);
+        AbacProxy.createPolicy(policy);
 
         return null;
     }

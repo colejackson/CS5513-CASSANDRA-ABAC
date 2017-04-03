@@ -35,13 +35,17 @@ public class Policy
 
     public final WhereClause whereClause;
 
-    public Policy(String policyName, ColumnMetadata.Raw columnFamily, WhereClause whereClause)
+    public final Permission permission;
+
+    public Policy(String policyName, ColumnMetadata.Raw columnFamily, WhereClause whereClause, Permission perm)
     {
         this.policyName = policyName;
 
         this.columnFamily = columnFamily;
 
         this.whereClause = whereClause;
+
+        this.permission = perm;
     }
 
     public List<Relation> getRelations()
@@ -49,9 +53,35 @@ public class Policy
         return whereClause.relations;
     }
 
-    public boolean isEquivalent()
+    public boolean isEquivalent(Policy otherPolicy)
     {
+        if(this.policyName != null
+           && otherPolicy.policyName != null
+           && !this.policyName.equalsIgnoreCase(otherPolicy.policyName))
+        {
+            return false;
+        }
 
+        if(this.columnFamily != null
+           && otherPolicy.columnFamily != null
+           && !this.columnFamily.equals(otherPolicy.columnFamily))
+        {
+            return false;
+        }
+
+        if(this.whereClause != null
+           && otherPolicy.whereClause != null
+           && !this.whereClause.equals(otherPolicy.whereClause))
+        {
+            return false;
+        }
+
+        if(this.permission != null
+           && otherPolicy.permission != null
+           && this.permission != otherPolicy.permission)
+        {
+            return false;
+        }
 
         return false;
     }

@@ -3,6 +3,7 @@ package org.apache.cassandra.cql3.statements;
 import org.apache.cassandra.auth.AbacProxy;
 import org.apache.cassandra.auth.AuthenticatedUser;
 import org.apache.cassandra.auth.Permission;
+import org.apache.cassandra.auth.Policy;
 import org.apache.cassandra.cql3.CFName;
 import org.apache.cassandra.exceptions.InvalidRequestException;
 import org.apache.cassandra.exceptions.RequestExecutionException;
@@ -16,14 +17,14 @@ import org.apache.cassandra.transport.messages.ResultMessage;
  */
 public class DropPolicyStatement extends AbacStatement
 {
-    private PolicyName policyName;
-    private CFName cfName;
+    private final Policy policy;
+    private final CFName cfName;
 
-    public DropPolicyStatement(PolicyName policyName, CFName cfname)
+    public DropPolicyStatement(Policy policy, CFName cfname)
     {
         super(cfname);
 
-        this.policyName = policyName;
+        this.policy = policy;
         this.cfName = cfname;
     }
 
@@ -48,17 +49,18 @@ public class DropPolicyStatement extends AbacStatement
     {
         state.ensureNotAnonymous();
 
-        if(!AbacProxy.policyExists(cfName.getKeyspace() + '.' + cfName.getColumnFamily(),
-                                   policyName.getName()))
+        if(!AbacProxy.policyExists(policy))
         {
-            throw new InvalidRequestException("A policy with this name does not exist.");
+            throw new InvalidRequestException(String.format("A policy {%s} does not exist on cf {%s}.",
+                                                            policy.policyName,
+                                                            cfName.getColumnFamily()));
         }
     }
 
     @Override
     public ResultMessage execute(ClientState state) throws RequestValidationException, RequestExecutionException
     {
-        AbacProxy.dropPolicy(cfName.getKeyspace() + '.' + cfName.getColumnFamily(), policyName.getName());
+        AbacProxy.dropPolicy(policy);
 
         return null;
     }
