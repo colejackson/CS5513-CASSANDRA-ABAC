@@ -15,12 +15,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.cassandra.cql3;
+package org.apache.cassandra.cql3.relations;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import org.apache.cassandra.cql3.AbstractMarker;
+import org.apache.cassandra.cql3.ColumnSpecification;
+import org.apache.cassandra.cql3.Operator;
+import org.apache.cassandra.cql3.Term;
+import org.apache.cassandra.cql3.Tuples;
+import org.apache.cassandra.cql3.VariableSpecifications;
 import org.apache.cassandra.schema.ColumnMetadata;
 import org.apache.cassandra.schema.TableMetadata;
 import org.apache.cassandra.cql3.Term.MultiColumnRaw;
@@ -49,14 +55,14 @@ public class MultiColumnRelation extends Relation
     private final List<ColumnMetadata.Raw> entities;
 
     /** A Tuples.Literal or Tuples.Raw marker */
-    private final Term.MultiColumnRaw valuesOrMarker;
+    private MultiColumnRaw valuesOrMarker;
 
     /** A list of Tuples.Literal or Tuples.Raw markers */
-    private final List<? extends Term.MultiColumnRaw> inValues;
+    private final List<? extends MultiColumnRaw> inValues;
 
     private final Tuples.INRaw inMarker;
 
-    private MultiColumnRelation(List<ColumnMetadata.Raw> entities, Operator relationType, Term.MultiColumnRaw valuesOrMarker, List<? extends Term.MultiColumnRaw> inValues, Tuples.INRaw inMarker)
+    private MultiColumnRelation(List<ColumnMetadata.Raw> entities, Operator relationType, MultiColumnRaw valuesOrMarker, List<? extends MultiColumnRaw> inValues, Tuples.INRaw inMarker)
     {
         this.entities = entities;
         this.relationType = relationType;
@@ -76,7 +82,7 @@ public class MultiColumnRelation extends Relation
      * @param valuesOrMarker a Tuples.Literal instance or a Tuples.Raw marker
      * @return a new <code>MultiColumnRelation</code> instance
      */
-    public static MultiColumnRelation createNonInRelation(List<ColumnMetadata.Raw> entities, Operator relationType, Term.MultiColumnRaw valuesOrMarker)
+    public static MultiColumnRelation createNonInRelation(List<ColumnMetadata.Raw> entities, Operator relationType, MultiColumnRaw valuesOrMarker)
     {
         assert relationType != Operator.IN;
         return new MultiColumnRelation(entities, relationType, valuesOrMarker, null, null);
@@ -89,7 +95,7 @@ public class MultiColumnRelation extends Relation
      * @param inValues a list of Tuples.Literal instances or a Tuples.Raw markers
      * @return a new <code>MultiColumnRelation</code> instance
      */
-    public static MultiColumnRelation createInRelation(List<ColumnMetadata.Raw> entities, List<? extends Term.MultiColumnRaw> inValues)
+    public static MultiColumnRelation createInRelation(List<ColumnMetadata.Raw> entities, List<? extends MultiColumnRaw> inValues)
     {
         return new MultiColumnRelation(entities, Operator.IN, null, inValues, null);
     }
@@ -111,16 +117,21 @@ public class MultiColumnRelation extends Relation
         return entities;
     }
 
+    protected void setValue(Raw term)
+    {
+        this.valuesOrMarker = (MultiColumnRaw) term;
+    }
+
     /**
      * For non-IN relations, returns the Tuples.Literal or Tuples.Raw marker for a single tuple.
      * @return a Tuples.Literal for non-IN relations or Tuples.Raw marker for a single tuple.
      */
-    public Term.MultiColumnRaw getValue()
+    public MultiColumnRaw getValue()
     {
         return relationType == Operator.IN ? inMarker : valuesOrMarker;
     }
 
-    public List<? extends Term.Raw> getInValues()
+    public List<? extends Raw> getInValues()
     {
         assert relationType == Operator.IN;
         return inValues;

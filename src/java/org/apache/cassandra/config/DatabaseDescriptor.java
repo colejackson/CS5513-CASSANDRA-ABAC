@@ -35,7 +35,7 @@ import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
 
 import org.apache.cassandra.auth.*;
-import org.apache.cassandra.cql3.PolicyClause;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

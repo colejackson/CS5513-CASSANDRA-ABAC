@@ -24,6 +24,7 @@ import com.google.common.base.Joiner;
 
 import org.apache.cassandra.cql3.*;
 import org.apache.cassandra.cql3.functions.Function;
+import org.apache.cassandra.cql3.relations.Relation;
 import org.apache.cassandra.cql3.statements.Bound;
 import org.apache.cassandra.cql3.statements.StatementType;
 import org.apache.cassandra.db.*;

@@ -4,7 +4,6 @@ import org.apache.cassandra.auth.AbacProxy;
 import org.apache.cassandra.auth.AuthenticatedUser;
 import org.apache.cassandra.auth.Permission;
 import org.apache.cassandra.cql3.CFName;
-import org.apache.cassandra.cql3.PolicyName;
 import org.apache.cassandra.exceptions.InvalidRequestException;
 import org.apache.cassandra.exceptions.RequestExecutionException;
 import org.apache.cassandra.exceptions.RequestValidationException;

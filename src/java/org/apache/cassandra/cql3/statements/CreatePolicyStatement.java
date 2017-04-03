@@ -4,9 +4,7 @@ import org.apache.cassandra.auth.AbacProxy;
 import org.apache.cassandra.auth.AuthenticatedUser;
 import org.apache.cassandra.auth.Permission;
 import org.apache.cassandra.cql3.CFName;
-import org.apache.cassandra.cql3.CQL3Type;
-import org.apache.cassandra.cql3.PolicyClause;
-import org.apache.cassandra.cql3.PolicyName;
+import org.apache.cassandra.cql3.relations.PolicyRelation;
 import org.apache.cassandra.exceptions.InvalidRequestException;
 import org.apache.cassandra.exceptions.RequestExecutionException;
 import org.apache.cassandra.exceptions.RequestValidationException;
@@ -24,19 +22,19 @@ public class CreatePolicyStatement extends AbacStatement
     private final PolicyName policyName;
     private final CFName cfName;
     private final Set<Permission> perms;
-    private final PolicyClause policyClause;
+    private final PolicyRelation policyRelation;
 
     public CreatePolicyStatement(PolicyName policyName,
                                  CFName cfname,
                                  Set<Permission> perms,
-                                 PolicyClause policyClause)
+                                 PolicyRelation policyRelation)
     {
         super(cfname);
 
         this.policyName = policyName;
         this.cfName = cfname;
         this.perms = perms;
-        this.policyClause = policyClause;
+        this.policyRelation = policyRelation;
     }
 
     @Override
@@ -72,7 +70,7 @@ public class CreatePolicyStatement extends AbacStatement
         AbacProxy.createPolicy(policyName.getName(),
                                cfName.getKeyspace() + "." + cfName.getColumnFamily(),
                                perms,
-                               policyClause);
+                               policyRelation);
 
         return null;
     }

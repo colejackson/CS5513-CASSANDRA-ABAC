@@ -24,6 +24,7 @@ import java.util.List;
 import org.apache.cassandra.cql3.*;
 import org.apache.cassandra.cql3.conditions.ColumnCondition;
 import org.apache.cassandra.cql3.conditions.Conditions;
+import org.apache.cassandra.cql3.relations.SingleColumnRelation;
 import org.apache.cassandra.cql3.restrictions.StatementRestrictions;
 import org.apache.cassandra.db.Clustering;
 import org.apache.cassandra.db.CompactTables;

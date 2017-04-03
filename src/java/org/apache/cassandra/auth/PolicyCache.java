@@ -1,7 +1,7 @@
 package org.apache.cassandra.auth;
 
 import org.apache.cassandra.config.DatabaseDescriptor;
-import org.apache.cassandra.cql3.PolicyClause;
+import org.apache.cassandra.cql3.relations.PolicyRelation;
 import org.apache.cassandra.utils.Pair;
 
 import java.util.Set;
@@ -12,7 +12,7 @@ import static org.apache.cassandra.auth.AbacProxy.getAllPoliciesOn;
 /**
  * Created by coleman on 3/27/17.
  */
-public class PolicyCache extends AuthCache<Pair<String,String>, Set<PolicyClause>>
+public class PolicyCache extends AuthCache<Pair<String,String>, Set<PolicyRelation>>
 {
     public PolicyCache() // TODO: ABAC Update to not use the permissions cache methods.
     {
@@ -27,7 +27,7 @@ public class PolicyCache extends AuthCache<Pair<String,String>, Set<PolicyClause
                 DatabaseDescriptor::isUsingAbac);
     }
 
-    public Set<PolicyClause> getPolicies(String tableName, String permString)
+    public Set<PolicyRelation> getPolicies(String tableName, String permString)
     {
 
 

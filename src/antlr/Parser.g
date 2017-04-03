@@ -1025,7 +1025,7 @@ createPolicyStatement returns [CreatePolicyStatement stmt]
       K_DENY
           perms=basicPermissions
       K_IF K_ATTRIBUTE
-          pc=policyClause
+          pc=policyRelation
       { $stmt = new CreatePolicyStatement(pn, name, perms, pc); }
     ;
 
@@ -1456,7 +1456,7 @@ plcyName[PolicyName pn]
     | QMARK {addRecognitionError("Bind variables cannot be used for policy names");}
     ;
 
-policyClause returns [PolicyClause pc]
+policyRelation returns [PolicyClause pc]
     : attr=STRING_LITERAL nt=native_type type=relationType col=ident { $pc = new PolicyClause($attr.text, nt, type, col); }
     | attr=STRING_LITERAL nt=native_type K_IN col=ident { $pc = new PolicyClause($attr.text, nt, Operator.IN, col); }
     | attr=STRING_LITERAL nt=native_type cont=containsOperator col=ident { $pc = new PolicyClause($attr.text, nt, cont, col); }

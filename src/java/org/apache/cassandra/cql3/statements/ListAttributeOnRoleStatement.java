@@ -16,43 +16,11 @@
  * limitations under the License.
  */
 
-package org.apache.cassandra.auth;
-
-import java.util.List;
-
-import org.apache.cassandra.cql3.WhereClause;
-import org.apache.cassandra.cql3.relations.Relation;
-import org.apache.cassandra.schema.ColumnMetadata;
+package org.apache.cassandra.cql3.statements;
 
 /**
- * Created by coleman on 3/30/17.
+ * Created by coleman on 4/2/17.
  */
-public class Policy
+public class ListAttributeOnRoleStatement
 {
-    public final String policyName;
-
-    public final ColumnMetadata.Raw columnFamily;
-
-    public final WhereClause whereClause;
-
-    public Policy(String policyName, ColumnMetadata.Raw columnFamily, WhereClause whereClause)
-    {
-        this.policyName = policyName;
-
-        this.columnFamily = columnFamily;
-
-        this.whereClause = whereClause;
-    }
-
-    public List<Relation> getRelations()
-    {
-        return whereClause.relations;
-    }
-
-    public boolean isEquivalent()
-    {
-
-
-        return false;
-    }
 }

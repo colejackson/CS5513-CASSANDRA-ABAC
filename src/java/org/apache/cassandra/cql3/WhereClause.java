@@ -22,6 +22,7 @@ import java.util.List;
 
 import com.google.common.collect.ImmutableList;
 
+import org.apache.cassandra.cql3.relations.Relation;
 import org.apache.cassandra.cql3.restrictions.CustomIndexExpression;
 
 public final class WhereClause

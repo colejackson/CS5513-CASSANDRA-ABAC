@@ -17,12 +17,10 @@
  */
 package org.apache.cassandra.service;
 
-import java.io.UnsupportedEncodingException;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -32,10 +30,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.cassandra.auth.*;
-import org.apache.cassandra.cql3.PolicyClause;
-import org.apache.cassandra.db.marshal.Int32Type;
-import org.apache.cassandra.db.marshal.ShortType;
-import org.apache.cassandra.db.marshal.UTF8Type;
+import org.apache.cassandra.cql3.relations.PolicyRelation;
 import org.apache.cassandra.schema.TableMetadata;
 import org.apache.cassandra.schema.TableMetadataRef;
 import org.apache.cassandra.config.DatabaseDescriptor;
@@ -52,8 +47,6 @@ import org.apache.cassandra.schema.SchemaKeyspace;
 import org.apache.cassandra.utils.FBUtilities;
 import org.apache.cassandra.utils.JVMStabilityInspector;
 import org.apache.cassandra.utils.CassandraVersion;
-
-import javax.xml.crypto.Data;
 
 /**
  * State related to a client connection.
@@ -444,9 +437,9 @@ public class ClientState
             String perm = cqlQuery.contains("SELECT ") ? "SELECT" : "MODIFY";
             String tableString = table.resource.getKeyspace() + '.' + table.resource.getTable();
 
-            Set<PolicyClause> policies = AbacProxy.getAllPoliciesOn(tableString, perm); // TODO: USE CACHE
+            Set<PolicyRelation> policies = AbacProxy.getAllPoliciesOn(tableString, perm); // TODO: USE CACHE
 
-            for(PolicyClause policy : policies)
+            for(PolicyRelation policy : policies)
             {
                 Set<ByteBuffer> attr = user.getAttribute(policy.getAttributeName());
 
@@ -479,7 +472,7 @@ public class ClientState
                                                              user.getName()));
                 }
 
-                ret = addWhereClause(ret, policy.generateWhereClause().replace(PolicyClause.WHERE_PLACEHOLDER,
+                ret = addWhereClause(ret, policy.generateWhereClause().replace(PolicyRelation.WHERE_PLACEHOLDER,
                                                                                maxValue.toString()));
             }
         }

@@ -15,11 +15,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.cassandra.cql3;
+package org.apache.cassandra.cql3.relations;
 
 import java.util.ArrayList;
 import java.util.List;
 
+import org.apache.cassandra.cql3.ColumnSpecification;
+import org.apache.cassandra.cql3.Operator;
+import org.apache.cassandra.cql3.Term;
+import org.apache.cassandra.cql3.VariableSpecifications;
 import org.apache.cassandra.schema.TableMetadata;
 import org.apache.cassandra.schema.ColumnMetadata;
 import org.apache.cassandra.cql3.restrictions.Restriction;
@@ -36,6 +40,11 @@ public abstract class Relation
     {
         return relationType;
     }
+
+    /**
+     * Allows the relation subclass to set the values in another subclass
+     */
+    protected abstract void setValue(Term.Raw term);
 
     /**
      * Returns the raw value for this relation, or null if this is an IN relation.

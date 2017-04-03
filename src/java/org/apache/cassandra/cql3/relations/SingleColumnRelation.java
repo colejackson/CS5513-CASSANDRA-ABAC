@@ -15,12 +15,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.cassandra.cql3;
+package org.apache.cassandra.cql3.relations;
 
 import java.util.Collections;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.apache.cassandra.cql3.ColumnSpecification;
+import org.apache.cassandra.cql3.Constants;
+import org.apache.cassandra.cql3.Lists;
+import org.apache.cassandra.cql3.Operator;
+import org.apache.cassandra.cql3.Term;
+import org.apache.cassandra.cql3.VariableSpecifications;
 import org.apache.cassandra.schema.ColumnMetadata;
 import org.apache.cassandra.schema.TableMetadata;
 import org.apache.cassandra.cql3.Term.Raw;
@@ -44,11 +50,11 @@ import static org.apache.cassandra.cql3.statements.RequestValidations.invalidReq
 public final class SingleColumnRelation extends Relation
 {
     private final ColumnMetadata.Raw entity;
-    private final Term.Raw mapKey;
-    private final Term.Raw value;
-    private final List<Term.Raw> inValues;
+    private final Raw mapKey;
+    private Raw value;
+    private final List<Raw> inValues;
 
-    private SingleColumnRelation(ColumnMetadata.Raw entity, Term.Raw mapKey, Operator type, Term.Raw value, List<Term.Raw> inValues)
+    private SingleColumnRelation(ColumnMetadata.Raw entity, Raw mapKey, Operator type, Raw value, List<Raw> inValues)
     {
         this.entity = entity;
         this.mapKey = mapKey;
@@ -68,7 +74,7 @@ public final class SingleColumnRelation extends Relation
      * @param type the type that describes how this entity relates to the value.
      * @param value the value being compared.
      */
-    public SingleColumnRelation(ColumnMetadata.Raw entity, Term.Raw mapKey, Operator type, Term.Raw value)
+    public SingleColumnRelation(ColumnMetadata.Raw entity, Raw mapKey, Operator type, Raw value)
     {
         this(entity, mapKey, type, value, null);
     }
@@ -80,22 +86,27 @@ public final class SingleColumnRelation extends Relation
      * @param type the type that describes how this entity relates to the value.
      * @param value the value being compared.
      */
-    public SingleColumnRelation(ColumnMetadata.Raw entity, Operator type, Term.Raw value)
+    public SingleColumnRelation(ColumnMetadata.Raw entity, Operator type, Raw value)
     {
         this(entity, null, type, value);
     }
 
-    public Term.Raw getValue()
+    protected void setValue(Raw term)
+    {
+        this.value = term;
+    }
+
+    public Raw getValue()
     {
         return value;
     }
 
-    public List<? extends Term.Raw> getInValues()
+    public List<? extends Raw> getInValues()
     {
         return inValues;
     }
 
-    public static SingleColumnRelation createInRelation(ColumnMetadata.Raw entity, List<Term.Raw> inValues)
+    public static SingleColumnRelation createInRelation(ColumnMetadata.Raw entity, List<Raw> inValues)
     {
         return new SingleColumnRelation(entity, null, Operator.IN, null, inValues);
     }
@@ -105,7 +116,7 @@ public final class SingleColumnRelation extends Relation
         return entity;
     }
 
-    public Term.Raw getMapKey()
+    public Raw getMapKey()
     {
         return mapKey;
     }

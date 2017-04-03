@@ -1,42 +1,53 @@
 package org.apache.cassandra.auth;
 
 import org.apache.cassandra.cql3.*;
+import org.apache.cassandra.cql3.relations.PolicyRelation;
 import org.apache.cassandra.db.ConsistencyLevel;
-import org.apache.cassandra.db.marshal.BooleanType;
-import org.apache.cassandra.db.marshal.BytesType;
 import org.apache.cassandra.db.marshal.UTF8Type;
 import org.apache.cassandra.schema.SchemaConstants;
 import org.apache.cassandra.schema.TableMetadata;
 import org.apache.cassandra.transport.messages.ResultMessage;
+import org.w3c.dom.Attr;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Lists;
 
 import javax.xml.bind.DatatypeConverter;
+import javax.xml.transform.Result;
 import java.io.*;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.function.Function;
 
 /**
  * Created by coleman on 3/26/17.
  */
 public final class AbacProxy
 {
-    private static final String KS = SchemaConstants.AUTH_KEYSPACE_NAME;
-    private static final String CF = AuthKeyspace.POLICIES;
+    public static void createPolicy(Policy policy) {}
 
-    private static final List<ColumnSpecification> metadata =
-            ImmutableList.of(
-                    new ColumnSpecification(KS, CF, new ColumnIdentifier("policy", true), UTF8Type.instance),
-                    new ColumnSpecification(KS, CF, new ColumnIdentifier("cf", true), UTF8Type.instance),
-                    new ColumnSpecification(KS, CF, new ColumnIdentifier("description", true), UTF8Type.instance),
-                    new ColumnSpecification(KS, CF, new ColumnIdentifier("type", true), UTF8Type.instance));
+    public static void dropPolicy(Policy policy) {}
+
+    public static ResultMessage listPolicies(TableMetadata table) {return null;}
+
+    public static List<Policy> getPolicies(TableMetadata table) {return null;}
+
+    public boolean policyExists(Policy policy) {return false;}
+
+    public static void createAttribute(Attribute attribute) {}
+
+    public static void dropAttribute(Attribute attribute) {}
+
+    public static ResultMessage listAttributes() {return null;}
+
+    public static Attribute getAttributes(Attribute attribute) {return null;}
+
+    public static boolean attributeExists(Attribute attribute) {return false;}
 
     public static void createPolicy(String policyName,
                                     String cfName,
                                     Set<Permission> perms,
-                                    PolicyClause policy)
+                                    PolicyRelation policy)
     {
         String perm;
 
@@ -107,9 +118,9 @@ public final class AbacProxy
         return !results.isEmpty();
     }
 
-    public static Set<PolicyClause> getAllPoliciesOn(String tableName, String permissionString)
+    public static Set<PolicyRelation> getAllPoliciesOn(String tableName, String permissionString)
     {
-        Set<PolicyClause> ret = new HashSet<>();
+        Set<PolicyRelation> ret = new HashSet<>();
 
         String cqlString = String.format("SELECT obj, type FROM %s.%s WHERE cf = %s",
                 SchemaConstants.AUTH_KEYSPACE_NAME,
@@ -124,7 +135,7 @@ public final class AbacProxy
             {
                 if("ALL".equalsIgnoreCase(permissionString) || r.getString("type").equalsIgnoreCase(permissionString))
                 {
-                    ret.add((PolicyClause) ois.readObject());
+                    ret.add((PolicyRelation) ois.readObject());
                 }
             }
             catch (IOException | ClassNotFoundException c)
@@ -150,7 +161,7 @@ public final class AbacProxy
 
     private static ResultMessage prepare(UntypedResultSet untypedResultSet)
     {
-        ResultSet results = new ResultSet(metadata);
+        ResultSet results = new ResultSet(POLICY_SPECIFICATION);
 
         untypedResultSet.forEach(row -> {
             results.addColumnValue(row.getBytes("policy"));
@@ -166,4 +177,43 @@ public final class AbacProxy
     {
         return '\'' + str.replace("'", "''") + '\'';
     }
+
+    private static final String KS = SchemaConstants.AUTH_KEYSPACE_NAME;
+    private static final String POLICY_CF = AuthKeyspace.POLICIES;
+
+    private static final List<ColumnSpecification> POLICY_SPECIFICATION =
+    ImmutableList.of(
+    new ColumnSpecification(KS, POLICY_CF, new ColumnIdentifier("policy", true), UTF8Type.instance),
+    new ColumnSpecification(KS, POLICY_CF, new ColumnIdentifier("cf", true), UTF8Type.instance),
+    new ColumnSpecification(KS, POLICY_CF, new ColumnIdentifier("description", true), UTF8Type.instance),
+    new ColumnSpecification(KS, POLICY_CF, new ColumnIdentifier("type", true), UTF8Type.instance));
+
+    public static Function<UntypedResultSet.Row, Policy> ROW_TO_POLICY = new Function<UntypedResultSet.Row, Policy>()
+    {
+        public Policy apply(UntypedResultSet.Row row)
+        {
+
+
+            return null;
+        }
+    };
+
+    private static final String ATTRIBUTE_CF = AuthKeyspace.ATTRIBUTES;
+
+    private static final List<ColumnSpecification> ATTRIBUTE_SPECIFICATION =
+    ImmutableList.of(
+    new ColumnSpecification(KS, POLICY_CF, new ColumnIdentifier("policy", true), UTF8Type.instance),
+    new ColumnSpecification(KS, POLICY_CF, new ColumnIdentifier("cf", true), UTF8Type.instance),
+    new ColumnSpecification(KS, POLICY_CF, new ColumnIdentifier("description", true), UTF8Type.instance),
+    new ColumnSpecification(KS, POLICY_CF, new ColumnIdentifier("type", true), UTF8Type.instance));
+
+    public static Function<UntypedResultSet.Row, Attribute> ROW_TO_ATTRIBUTE = new Function<UntypedResultSet.Row, Attribute>()
+    {
+        public Attribute apply(UntypedResultSet.Row row)
+        {
+
+
+            return null;
+        }
+    };
 }

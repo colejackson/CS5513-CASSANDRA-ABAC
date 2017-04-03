@@ -18,9 +18,84 @@
 
 package org.apache.cassandra.auth;
 
+import org.apache.cassandra.cql3.CQL3Type;
+
 /**
  * Created by coleman on 3/30/17.
  */
 public class Attribute
 {
+    public final String attributeName;
+    public final CQL3Type attributeType;
+    public final AttributeOrdering attributeOrdering;
+
+    private Attribute(String attributeName, CQL3Type attributeType, AttributeOrdering attributeOrdering)
+    {
+        this.attributeName = attributeName;
+        this.attributeType = attributeType;
+        this.attributeOrdering = attributeOrdering;
+    }
+
+    public static Builder getBuilder()
+    {
+        return new Builder();
+    }
+
+    public static class Builder
+    {
+        private String attributeName;
+        private CQL3Type attributeType;
+        private AttributeOrdering attributeOrdering;
+
+        private Builder() {}
+
+        public Builder setName(String name)
+        {
+            this.attributeName = name;
+            return this;
+        }
+
+        public Builder setType(CQL3Type type)
+        {
+            this.attributeType = type;
+            return this;
+        }
+
+        public Builder setOrdering(AttributeOrdering ordering)
+        {
+            this.attributeOrdering = ordering;
+            return this;
+        }
+
+        public Attribute build()
+        {
+            return new Attribute(attributeName, attributeType, attributeOrdering);
+        }
+    }
+
+    public boolean equivalentTo(Attribute otherAttribute)
+    {
+        if(this.attributeName != null
+            && otherAttribute.attributeName != null
+            && !this.attributeName.equalsIgnoreCase(otherAttribute.attributeName))
+        {
+            return false;
+        }
+
+        if(this.attributeType != null
+           && otherAttribute.attributeType != null
+           && this.attributeType != otherAttribute.attributeType)
+        {
+            return false;
+        }
+
+        if(this.attributeOrdering != null
+           && otherAttribute.attributeOrdering != null
+           && !this.attributeOrdering.equals(otherAttribute.attributeOrdering))
+        {
+            return false;
+        }
+
+        return true;
+    }
 }

@@ -16,9 +16,11 @@
  * limitations under the License.
  */
 
+package org.apache.cassandra.cql3.statements;
+
 /**
- * Created by coleman on 3/30/17.
+ * Created by coleman on 4/2/17.
  */
-public class Policy
+public class RemoveAttributeStatement
 {
 }
