@@ -27,6 +27,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.helpers.MessageFormatter;
 
+import org.apache.cassandra.auth.Attribute;
+import org.apache.cassandra.auth.AttributeValue;
 import org.apache.cassandra.schema.TableId;
 import org.apache.cassandra.schema.TableMetadata;
 import org.apache.cassandra.schema.ColumnMetadata;
@@ -551,6 +553,39 @@ public class BatchStatement implements CQLStatement
                                                               : boundNames.getPartitionKeyBindIndexes(batchStatement.statements.get(0).metadata());
 
             return new ParsedStatement.Prepared(batchStatement, boundNames, partitionKeyBindIndexes);
+        }
+
+        public boolean requiresAttributes()
+        {
+            for(ModificationStatement.Parsed modificationStatement : parsedStatements)
+            {
+                if(modificationStatement.requiresAttributes())
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        public Set<Attribute> getRequiredAttributes()
+        {
+            Set<Attribute> attributes = new HashSet<>();
+
+            for(ModificationStatement.Parsed modificationStatement : parsedStatements)
+            {
+                attributes.addAll(modificationStatement.getRequiredAttributes());
+            }
+
+            return attributes;
+        }
+
+        public void setRequiredAttributes(Set<AttributeValue> attributed)
+        {
+            for(ModificationStatement.Parsed modificationStatement : parsedStatements)
+            {
+                modificationStatement.setRequiredAttributes(attributed);
+            }
         }
     }
 

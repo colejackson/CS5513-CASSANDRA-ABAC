@@ -20,10 +20,8 @@ package org.apache.cassandra.cql3.statements;
 
 import org.apache.cassandra.auth.AbacProxy;
 import org.apache.cassandra.auth.Attribute;
-import org.apache.cassandra.auth.AttributeOrdering;
 import org.apache.cassandra.auth.AuthenticatedUser;
 import org.apache.cassandra.auth.Permission;
-import org.apache.cassandra.cql3.CQL3Type;
 import org.apache.cassandra.exceptions.InvalidRequestException;
 import org.apache.cassandra.exceptions.RequestExecutionException;
 import org.apache.cassandra.exceptions.RequestValidationException;

@@ -17,12 +17,14 @@
  */
 package org.apache.cassandra.auth;
 
+import java.nio.ByteBuffer;
 import java.util.*;
 import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 
 import com.google.common.base.*;
 import com.google.common.base.Objects;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import org.apache.commons.lang3.StringUtils;
@@ -32,6 +34,10 @@ import org.slf4j.LoggerFactory;
 import org.apache.cassandra.concurrent.ScheduledExecutors;
 import org.apache.cassandra.config.Config;
 import org.apache.cassandra.config.DatabaseDescriptor;
+import org.apache.cassandra.db.marshal.AbstractType;
+import org.apache.cassandra.db.marshal.BooleanType;
+import org.apache.cassandra.db.marshal.FloatType;
+import org.apache.cassandra.db.marshal.Int32Type;
 import org.apache.cassandra.schema.Schema;
 import org.apache.cassandra.schema.SchemaConstants;
 import org.apache.cassandra.cql3.*;
@@ -42,6 +48,7 @@ import org.apache.cassandra.exceptions.*;
 import org.apache.cassandra.service.QueryState;
 import org.apache.cassandra.transport.messages.ResultMessage;
 import org.apache.cassandra.utils.ByteBufferUtil;
+import org.apache.cassandra.utils.Pair;
 import org.mindrot.jbcrypt.BCrypt;
 
 /**
@@ -100,6 +107,24 @@ public class CassandraRoleManager implements IRoleManager
 
         }
     };
+
+    private static final Function<UntypedResultSet.Row, AttributeValue> ROW_TO_ATTRIBUTE = new Function<UntypedResultSet.Row, AttributeValue>()
+    {
+        public AttributeValue apply(UntypedResultSet.Row row)
+        {
+            // TODO: ABAC CREATE AN ATTRIBUTE TYPE FROM A ROW OBJECT
+
+            return null;
+        }
+    };
+
+    private static final String KS = SchemaConstants.AUTH_KEYSPACE_NAME;
+    private static final String ROLE_CF = AuthKeyspace.ROLES;
+
+    private static final List<ColumnSpecification> ATTRIBUTE_SPECIFICATION =
+    ImmutableList.of(
+    new ColumnSpecification(KS, ROLE_CF, new ColumnIdentifier("attribute", true), UTF8Type.instance),
+    new ColumnSpecification(KS, ROLE_CF, new ColumnIdentifier("value", true), UTF8Type.instance));
 
     public static final String LEGACY_USERS_TABLE = "users";
     // Transform a row in the legacy system_auth.users table to a Role instance,
@@ -181,27 +206,86 @@ public class CassandraRoleManager implements IRoleManager
 
     public void addAttribute(AttributeValue attribute, RoleResource role)
     {
+        AbstractType type = attribute.value.getExactTypeIfKnown(SchemaConstants.SCHEMA_KEYSPACE_NAME);
+        String blobFunction = null;
 
+        if(type.isCompatibleWith(UTF8Type.instance))
+        {
+            blobFunction = "text";
+        }
+        else if(type.isCompatibleWith(FloatType.instance))
+        {
+            blobFunction = "float";
+        }
+        else if(type.isCompatibleWith(Int32Type.instance))
+        {
+            blobFunction = "int";
+        }
+        else if(type.isCompatibleWith(BooleanType.instance))
+        {
+            blobFunction = "boolean";
+        }
+
+        String cqlQuery = String.format("UPDATE %s.%s SET attributes = attribute + {%s, (%s,%s)} WHERE role = %s",
+                                        SchemaConstants.AUTH_KEYSPACE_NAME,
+                                        AuthKeyspace.ROLES,
+                                        escape(attribute.attributeName),
+                                        escape(type.asCQL3Type().toString()),
+                                        String.format("%sAsBlob(%s)", blobFunction, attribute.value.getText()),
+                                        escape(role.getRoleName()));
+
+        process(cqlQuery, consistencyForRole(role.getRoleName()));
     }
 
     public List<AttributeValue> getAttributes(RoleResource roleResource)
     {
-        return null;
+        String cqlQuery = String.format("SELECT attributes FROM %s.%s WHERE role = %s",
+                                        SchemaConstants.AUTH_KEYSPACE_NAME,
+                                        AuthKeyspace.ROLES,
+                                        escape(roleResource.getRoleName()));
+
+        UntypedResultSet results = process(cqlQuery, consistencyForRole(roleResource.getRoleName()));
+
+        Iterable<AttributeValue> attributeValues = Iterables.transform(results, ROW_TO_ATTRIBUTE);
+
+        return ImmutableList.<AttributeValue>builder().addAll(attributeValues).build();
     }
 
     public boolean hasAttribute(AttributeValue attribute, RoleResource role)
     {
-        return false;
+        String cqlQuery = String.format("SELECT attributes[%s] FROM %s.%s WHERE role = %s",
+                                        escape(attribute.attributeName),
+                                        SchemaConstants.AUTH_KEYSPACE_NAME,
+                                        AuthKeyspace.ROLES,
+                                        escape(role.getRoleName()));
+
+        UntypedResultSet results = process(cqlQuery, consistencyForRole(role.getRoleName()));
+
+        return !results.isEmpty();
     }
 
     public ResultMessage listAttributes(RoleResource role)
     {
-        return null;
+        List<AttributeValue> attributeValues = getAttributes(role);
+
+        ResultSet result = new ResultSet(ATTRIBUTE_SPECIFICATION);
+        for (AttributeValue attr : attributeValues)
+        {
+            result.addColumnValue(UTF8Type.instance.decompose(attr.attributeName));
+            result.addColumnValue(UTF8Type.instance.decompose(attr.value.getText()));
+        }
+        return new ResultMessage.Rows(result);
     }
 
     public void removeAttribute(RoleResource role, AttributeValue attributeValue)
     {
+        String cqlQuery = String.format("DELETE attributes[%s] FROM %s.%s WHERE role = %s",
+                                        escape(attributeValue.attributeName),
+                                        SchemaConstants.AUTH_KEYSPACE_NAME,
+                                        AuthKeyspace.ROLES,
+                                        escape(role.getRoleName()));
 
+        process(cqlQuery, consistencyForRole(role.getRoleName()));
     }
 
     public Set<Option> supportedOptions()
@@ -316,13 +400,7 @@ public class CassandraRoleManager implements IRoleManager
     public Set<RoleResource> getAllRoles() throws RequestValidationException, RequestExecutionException
     {
         UntypedResultSet rows = process(String.format("SELECT role from %s.%s", SchemaConstants.AUTH_KEYSPACE_NAME, AuthKeyspace.ROLES), ConsistencyLevel.QUORUM);
-        Iterable<RoleResource> roles = Iterables.transform(rows, new Function<UntypedResultSet.Row, RoleResource>()
-        {
-            public RoleResource apply(UntypedResultSet.Row row)
-            {
-                return RoleResource.role(row.getString("role"));
-            }
-        });
+        Iterable<RoleResource> roles = Iterables.transform(rows, row -> RoleResource.role(row.getString("role")));
         return ImmutableSet.<RoleResource>builder().addAll(roles).build();
     }
 

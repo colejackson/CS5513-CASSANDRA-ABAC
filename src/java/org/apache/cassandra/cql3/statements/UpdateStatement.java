@@ -19,11 +19,18 @@ package org.apache.cassandra.cql3.statements;
 
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
+import java.util.concurrent.atomic.AtomicReference;
 
+import org.apache.cassandra.auth.Attribute;
+import org.apache.cassandra.auth.AttributeValue;
 import org.apache.cassandra.cql3.*;
 import org.apache.cassandra.cql3.conditions.ColumnCondition;
 import org.apache.cassandra.cql3.conditions.Conditions;
+import org.apache.cassandra.cql3.relations.PolicyRelation;
+import org.apache.cassandra.cql3.relations.Relation;
 import org.apache.cassandra.cql3.relations.SingleColumnRelation;
 import org.apache.cassandra.cql3.restrictions.StatementRestrictions;
 import org.apache.cassandra.db.Clustering;
@@ -324,6 +331,62 @@ public class UpdateStatement extends ModificationStatement
                                        restrictions,
                                        conditions,
                                        attrs);
+        }
+
+        public boolean requiresAttributes()
+        {
+            for(Relation relation : whereClause.relations)
+            {
+                if(relation instanceof PolicyRelation)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        public Set<Attribute> getRequiredAttributes()
+        {
+            Set<Attribute> attributes = new HashSet<>();
+
+            for(Relation relation : whereClause.relations)
+            {
+                if(relation instanceof PolicyRelation)
+                {
+                    attributes.add(((PolicyRelation) relation).getExpectedAttribute());
+                }
+            }
+
+            return attributes;
+        }
+
+        public void setRequiredAttributes(Set<AttributeValue> attributed)
+        {
+            for(Relation relation : whereClause.relations)
+            {
+                if(relation instanceof PolicyRelation)
+                {
+                    AtomicReference<Attribute> attribute = new AtomicReference<>(((PolicyRelation) relation).getExpectedAttribute());
+
+                    if(attributed.stream().noneMatch(a -> a.toAttribute().equivalentTo(attribute.get())))
+                    {
+                        throw new AssertionError("Something should match here, make sure it does.");
+                    }
+
+                    Term.Raw term = null;
+
+                    for(AttributeValue attr : attributed)
+                    {
+                        if(attr.toAttribute().equivalentTo(attribute.get()))
+                        {
+                            term = attr.value;
+                        }
+                    }
+
+                    ((PolicyRelation) relation).setValue(term);
+                }
+            }
         }
     }
 }

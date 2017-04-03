@@ -24,6 +24,8 @@ import java.util.function.Function;
  */
 public final class AbacProxy
 {
+    // TODO: ABAC IMPLEMENT PERSISTING THESE OBJECTS
+
     public static void createPolicy(Policy policy) {}
 
     public static void dropPolicy(Policy policy) {}
@@ -43,140 +45,6 @@ public final class AbacProxy
     public static Attribute getAttributes(Attribute attribute) {return null;}
 
     public static boolean attributeExists(Attribute attribute) {return false;}
-
-    public static void createPolicy(String policyName,
-                                    String cfName,
-                                    Set<Permission> perms,
-                                    PolicyRelation policy)
-    {
-        String perm;
-
-        if(perms.size() > 1)
-        {
-            perm = "ALL";
-        }
-        else if(perms.contains(Permission.SELECT))
-        {
-            perm = "SELECT";
-        }
-        else
-        {
-            perm = "MODIFY";
-        }
-
-        ByteArrayOutputStream out = new ByteArrayOutputStream();
-
-        try
-        {
-            ObjectOutputStream os = new ObjectOutputStream(out);
-            os.writeObject(policy);
-        }
-        catch (IOException e)
-        {
-            throw new RuntimeException("Failed to stream object output.");
-        }
-
-        String cqlString = String.format("INSERT INTO %s.%s (%s, %s, %s, %s, %s) VALUES (%s, %s, %s, %s, %s)",
-                SchemaConstants.AUTH_KEYSPACE_NAME,
-                AuthKeyspace.POLICIES,
-                "policy",
-                "cf",
-                "description",
-                "obj",
-                "type",
-                escape(policyName),
-                escape(cfName),
-                escape(policy.toString()),
-                "0x" + DatatypeConverter.printHexBinary(out.toByteArray()),
-                escape(perm));
-
-        QueryProcessor.process(cqlString, ConsistencyLevel.LOCAL_ONE);
-    }
-
-    public static void dropPolicy(String columnFamilyName, String policyName)
-    {
-        String cqlString = String.format("DELETE FROM %s.%s WHERE cf = %s AND policy = %s",
-                SchemaConstants.AUTH_KEYSPACE_NAME,
-                AuthKeyspace.POLICIES,
-                escape(columnFamilyName),
-                escape(policyName));
-
-        QueryProcessor.process(cqlString, ConsistencyLevel.LOCAL_ONE);
-    }
-
-    public static boolean policyExists(String columnFamilyName, String policyName)
-    {
-        String cqlString = String.format("SELECT obj FROM %s.%s WHERE cf = %s AND policy = %s",
-                SchemaConstants.AUTH_KEYSPACE_NAME,
-                AuthKeyspace.POLICIES,
-                escape(columnFamilyName),
-                escape(policyName)
-                );
-
-        UntypedResultSet results = QueryProcessor.process(cqlString, ConsistencyLevel.LOCAL_ONE);
-
-        return !results.isEmpty();
-    }
-
-    public static Set<PolicyRelation> getAllPoliciesOn(String tableName, String permissionString)
-    {
-        Set<PolicyRelation> ret = new HashSet<>();
-
-        String cqlString = String.format("SELECT obj, type FROM %s.%s WHERE cf = %s",
-                SchemaConstants.AUTH_KEYSPACE_NAME,
-                AuthKeyspace.POLICIES,
-                escape(tableName));
-
-        UntypedResultSet results = QueryProcessor.process(cqlString, ConsistencyLevel.LOCAL_ONE);
-
-        for(UntypedResultSet.Row r : results)
-        {
-            try(ObjectInputStream ois = new ObjectInputStream(new ByteArrayInputStream(r.getBlob("obj").array())))
-            {
-                if("ALL".equalsIgnoreCase(permissionString) || r.getString("type").equalsIgnoreCase(permissionString))
-                {
-                    ret.add((PolicyRelation) ois.readObject());
-                }
-            }
-            catch (IOException | ClassNotFoundException c)
-            {
-                throw new RuntimeException("Problem with deserializing policies.");
-            }
-        }
-
-        return ret;
-    }
-
-    public static ResultMessage listAllPoliciesOnTable(String tableName)
-    {
-        String cqlString = String.format("SELECT * FROM %s.%s WHERE cf = %s",
-                SchemaConstants.AUTH_KEYSPACE_NAME,
-                AuthKeyspace.POLICIES,
-                escape(tableName));
-
-        UntypedResultSet results = QueryProcessor.process(cqlString, ConsistencyLevel.LOCAL_ONE);
-
-        return prepare(results);
-    }
-
-    private static ResultMessage prepare(UntypedResultSet untypedResultSet)
-    {
-        ResultSet results = new ResultSet(POLICY_SPECIFICATION);
-
-        untypedResultSet.forEach(row -> {
-            results.addColumnValue(row.getBytes("policy"));
-            results.addColumnValue(row.getBytes("cf"));
-            results.addColumnValue(row.getBytes("description"));
-            results.addColumnValue(row.getBytes("type"));
-        });
-
-        return new ResultMessage.Rows(results);
-    }
-
-    private static String escape(String str)
-    {
-        return '\'' + str.replace("'", "''") + '\'';
-    }
 
     private static final String KS = SchemaConstants.AUTH_KEYSPACE_NAME;
     private static final String POLICY_CF = AuthKeyspace.POLICIES;

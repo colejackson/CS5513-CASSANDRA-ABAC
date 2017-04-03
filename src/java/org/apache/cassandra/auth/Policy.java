@@ -19,6 +19,7 @@
 package org.apache.cassandra.auth;
 
 import java.util.List;
+import java.util.Set;
 
 import org.apache.cassandra.cql3.WhereClause;
 import org.apache.cassandra.cql3.relations.Relation;
@@ -35,9 +36,9 @@ public class Policy
 
     public final WhereClause whereClause;
 
-    public final Permission permission;
+    public final Set<Permission> permission;
 
-    public Policy(String policyName, ColumnMetadata.Raw columnFamily, WhereClause whereClause, Permission perm)
+    public Policy(String policyName, ColumnMetadata.Raw columnFamily, WhereClause whereClause, Set<Permission> perm)
     {
         this.policyName = policyName;
 
@@ -78,7 +79,7 @@ public class Policy
 
         if(this.permission != null
            && otherPolicy.permission != null
-           && this.permission != otherPolicy.permission)
+           && this.permission.equals(otherPolicy.permission))
         {
             return false;
         }

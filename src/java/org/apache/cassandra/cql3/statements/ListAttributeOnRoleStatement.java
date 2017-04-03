@@ -22,6 +22,7 @@ import org.apache.cassandra.auth.AuthenticatedUser;
 import org.apache.cassandra.auth.Permission;
 import org.apache.cassandra.auth.RoleResource;
 import org.apache.cassandra.config.DatabaseDescriptor;
+import org.apache.cassandra.cql3.RoleName;
 import org.apache.cassandra.exceptions.InvalidRequestException;
 import org.apache.cassandra.exceptions.RequestExecutionException;
 import org.apache.cassandra.exceptions.RequestValidationException;
@@ -36,9 +37,9 @@ public class ListAttributeOnRoleStatement extends AuthenticationStatement
 {
     private final RoleResource role;
 
-    public ListAttributeOnRoleStatement(RoleResource role)
+    public ListAttributeOnRoleStatement(RoleName role)
     {
-        this.role = role;
+        this.role = RoleResource.fromName(role.getName());
     }
 
     public void checkAccess(ClientState state) throws UnauthorizedException, InvalidRequestException

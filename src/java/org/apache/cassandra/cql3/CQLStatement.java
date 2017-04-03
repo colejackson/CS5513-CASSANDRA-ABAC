@@ -17,11 +17,16 @@
  */
 package org.apache.cassandra.cql3;
 
+import java.util.List;
+import java.util.Set;
+
+import org.apache.cassandra.auth.Attribute;
 import org.apache.cassandra.cql3.functions.Function;
 import org.apache.cassandra.exceptions.*;
 import org.apache.cassandra.service.ClientState;
 import org.apache.cassandra.service.QueryState;
 import org.apache.cassandra.transport.messages.ResultMessage;
+import sun.font.AttributeValues;
 
 public interface CQLStatement
 {
@@ -67,4 +72,5 @@ public interface CQLStatement
      * @return functions all functions found (may contain duplicates)
      */
     public Iterable<Function> getFunctions();
+
 }

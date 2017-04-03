@@ -21,6 +21,7 @@ import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -30,7 +31,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.cassandra.auth.*;
+import org.apache.cassandra.cql3.CQLStatement;
 import org.apache.cassandra.cql3.relations.PolicyRelation;
+import org.apache.cassandra.cql3.statements.ParsedStatement;
 import org.apache.cassandra.schema.TableMetadata;
 import org.apache.cassandra.schema.TableMetadataRef;
 import org.apache.cassandra.config.DatabaseDescriptor;
@@ -60,6 +63,7 @@ public class ClientState
     private static final Set<IResource> PROTECTED_AUTH_RESOURCES = new HashSet<>();
     private static final Set<String> ALTERABLE_SYSTEM_KEYSPACES = new HashSet<>();
     private static final Set<IResource> DROPPABLE_SYSTEM_TABLES = new HashSet<>();
+
     static
     {
         // We want these system cfs to be always readable to authenticated users since many tools rely on them
@@ -426,5 +430,39 @@ public class ClientState
     private Set<Permission> authorize(IResource resource)
     {
         return user.getPermissions(resource);
+    }
+
+    public void decorateAbac(ParsedStatement prepared)
+    {
+        Set<Attribute> attributes = prepared.getRequiredAttributes();
+
+        Set<AttributeValue> setValues = new HashSet<>();
+
+        for(RoleResource role : user.getRoles())
+        {
+            List<AttributeValue> attributeValues = DatabaseDescriptor.getRoleManager().getAttributes(role);
+
+            for(AttributeValue attributeValue : attributeValues)
+            {
+                if(attributes.stream().anyMatch(a -> a.attributeName.equalsIgnoreCase(attributeValue.attributeName)))
+                {
+                    tryAddAttribute(attributeValue, setValues);
+                }
+            }
+        }
+
+        prepared.setRequiredAttributes(setValues);
+    }
+
+    private void tryAddAttribute(AttributeValue attributeValue, Set<AttributeValue> setValues)
+    {
+        if(setValues.stream().anyMatch(a -> a.attributeName.equalsIgnoreCase(attributeValue.attributeName)))
+        {
+            return;
+        }
+        else
+        {
+            setValues.add(attributeValue);
+        }
     }
 }

@@ -27,13 +27,11 @@ public class Attribute
 {
     public final String attributeName;
     public final CQL3Type attributeType;
-    public final AttributeOrdering attributeOrdering;
 
-    private Attribute(String attributeName, CQL3Type attributeType, AttributeOrdering attributeOrdering)
+    private Attribute(String attributeName, CQL3Type attributeType)
     {
         this.attributeName = attributeName;
         this.attributeType = attributeType;
-        this.attributeOrdering = attributeOrdering;
     }
 
     public static Builder getBuilder()
@@ -45,7 +43,6 @@ public class Attribute
     {
         private String attributeName;
         private CQL3Type attributeType;
-        private AttributeOrdering attributeOrdering;
 
         private Builder() {}
 
@@ -61,15 +58,9 @@ public class Attribute
             return this;
         }
 
-        public Builder setOrdering(AttributeOrdering ordering)
-        {
-            this.attributeOrdering = ordering;
-            return this;
-        }
-
         public Attribute build()
         {
-            return new Attribute(attributeName, attributeType, attributeOrdering);
+            return new Attribute(attributeName, attributeType);
         }
     }
 
@@ -89,13 +80,28 @@ public class Attribute
             return false;
         }
 
-        if(this.attributeOrdering != null
-           && otherAttribute.attributeOrdering != null
-           && !this.attributeOrdering.equals(otherAttribute.attributeOrdering))
-        {
+        return true;
+    }
+
+    public boolean equals(Object o)
+    {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+
+        Attribute attribute = (Attribute) o;
+
+        if (attributeName != null ? !attributeName.equals(attribute.attributeName) : attribute.attributeName != null)
             return false;
-        }
+        if (attributeType != null ? !attributeType.equals(attribute.attributeType) : attribute.attributeType != null)
+            return false;
 
         return true;
+    }
+
+    public int hashCode()
+    {
+        int result = attributeName != null ? attributeName.hashCode() : 0;
+        result = 31 * result + (attributeType != null ? attributeType.hashCode() : 0);
+        return result;
     }
 }

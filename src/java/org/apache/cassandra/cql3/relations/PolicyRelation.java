@@ -20,6 +20,7 @@ package org.apache.cassandra.cql3.relations;
 
 import java.util.List;
 
+import org.apache.cassandra.auth.Attribute;
 import org.apache.cassandra.cql3.ColumnSpecification;
 import org.apache.cassandra.cql3.Operator;
 import org.apache.cassandra.cql3.Term;
@@ -36,11 +37,11 @@ public class PolicyRelation extends Relation
 {
     private final Relation relation;
 
-    private final String expectedAttribute;
+    private final Attribute expectedAttribute;
 
     private boolean valueIsSet = false;
 
-    public PolicyRelation(Relation relation, String expectedAttribute)
+    public PolicyRelation(Relation relation, Attribute expectedAttribute)
     {
         this.relation = relation;
 
@@ -62,7 +63,7 @@ public class PolicyRelation extends Relation
         return relation.onToken();
     }
 
-    protected void setValue(Term.Raw term)
+    public void setValue(Term.Raw term)
     {
         this.relation.setValue(term);
 
@@ -147,7 +148,7 @@ public class PolicyRelation extends Relation
         }
     }
 
-    public String getExpectedAttribute()
+    public Attribute getExpectedAttribute()
     {
         return this.expectedAttribute;
     }
