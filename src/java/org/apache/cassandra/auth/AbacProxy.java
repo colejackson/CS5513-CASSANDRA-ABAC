@@ -47,7 +47,7 @@ public final class AbacProxy
                                             "permissions",
                                             escape(policy.policyName),
                                             escape(policy.columnFamily.toString()),
-                                            escape(toString(policy)),
+                                            "0x" + toString(policy),
                                             escape(policy.permission.size() > 1 ? "ALL" :
                                                    policy.permission.contains(Permission.SELECT) ? "SELECT" :
                                                    "MODIFY"));
@@ -109,7 +109,7 @@ public final class AbacProxy
 
     public static boolean policyExists(Policy policy)
     {
-        String cqlQuery = String.format("DELETE FROM %s.%s WHERE policy = %s AND cf = %s",
+        String cqlQuery = String.format("SELECT * FROM %s.%s WHERE policy = %s AND cf = %s",
                                         SchemaConstants.AUTH_KEYSPACE_NAME,
                                         AuthKeyspace.POLICIES,
                                         escape(policy.policyName),

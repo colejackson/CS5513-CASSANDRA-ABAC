@@ -39,7 +39,7 @@ public class ListAttributeOnRoleStatement extends AuthenticationStatement
 
     public ListAttributeOnRoleStatement(RoleName role)
     {
-        this.role = RoleResource.fromName(role.getName());
+        this.role = RoleResource.role(role.getName());
     }
 
     public void checkAccess(ClientState state) throws UnauthorizedException, InvalidRequestException

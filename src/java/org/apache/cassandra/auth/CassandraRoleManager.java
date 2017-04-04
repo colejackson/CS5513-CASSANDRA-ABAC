@@ -114,6 +114,11 @@ public class CassandraRoleManager implements IRoleManager
 
             Map<String, String> map = row.getMap("attributes", UTF8Type.instance, UTF8Type.instance);
 
+            if(map == null)
+            {
+                return ImmutableList.<AttributeValue>builder().build();
+            }
+
             for(String key : map.keySet())
             {
                 Attribute expected = AbacProxy.getAttribute(Attribute.getBuilder().setName(key).build());
@@ -235,39 +240,45 @@ public class CassandraRoleManager implements IRoleManager
 
     public void addAttribute(AttributeValue attribute, RoleResource role)
     {
-        String cqlQuery = String.format("UPDATE %s.%s SET attributes = attribute + {%s, %s} WHERE role = %s",
+        String cqlQuery = String.format("UPDATE %s.%s SET attributes = attributes + {'%s': %s} WHERE role = '%s'",
                                         SchemaConstants.AUTH_KEYSPACE_NAME,
                                         AuthKeyspace.ROLES,
                                         escape(attribute.attributeName),
-                                        escape(attribute.value.toString()),
+                                        attrEscape(attribute.value.toString()),
                                         escape(role.getRoleName()));
 
         process(cqlQuery, consistencyForRole(role.getRoleName()));
     }
 
+    private String attrEscape(String s)
+    {
+        if(s.contains("'"))
+        {
+            return s;
+        }
+        else
+        {
+            return '\'' + s + '\'';
+        }
+    }
+
     public List<AttributeValue> getAttributes(RoleResource roleResource)
     {
-        String cqlQuery = String.format("SELECT attributes FROM %s.%s WHERE role = %s",
+        String cqlQuery = String.format("SELECT attributes FROM %s.%s WHERE role = '%s'",
                                         SchemaConstants.AUTH_KEYSPACE_NAME,
                                         AuthKeyspace.ROLES,
                                         escape(roleResource.getRoleName()));
 
         UntypedResultSet results = process(cqlQuery, consistencyForRole(roleResource.getRoleName()));
 
-        return ROW_TO_ATTRIBUTE.apply(results.one());
+        return results.isEmpty() ? null : ROW_TO_ATTRIBUTE.apply(results.one());
     }
 
     public boolean hasAttribute(AttributeValue attribute, RoleResource role)
     {
-        String cqlQuery = String.format("SELECT attributes[%s] FROM %s.%s WHERE role = %s",
-                                        escape(attribute.attributeName),
-                                        SchemaConstants.AUTH_KEYSPACE_NAME,
-                                        AuthKeyspace.ROLES,
-                                        escape(role.getRoleName()));
+        List<AttributeValue> values = getAttributes(role);
 
-        UntypedResultSet results = process(cqlQuery, consistencyForRole(role.getRoleName()));
-
-        return !results.isEmpty();
+        return values.stream().anyMatch(a -> a.attributeName.equalsIgnoreCase(attribute.attributeName));
     }
 
     public ResultMessage listAttributes(RoleResource role)
@@ -285,7 +296,7 @@ public class CassandraRoleManager implements IRoleManager
 
     public void removeAttribute(RoleResource role, AttributeValue attributeValue)
     {
-        String cqlQuery = String.format("DELETE attributes[%s] FROM %s.%s WHERE role = %s",
+        String cqlQuery = String.format("DELETE attributes['%s'] FROM %s.%s WHERE role = '%s'",
                                         escape(attributeValue.attributeName),
                                         SchemaConstants.AUTH_KEYSPACE_NAME,
                                         AuthKeyspace.ROLES,
@@ -308,7 +319,7 @@ public class CassandraRoleManager implements IRoleManager
     throws RequestValidationException, RequestExecutionException
     {
         String insertCql = options.getPassword().isPresent()
-                         ? String.format("INSERT INTO %s.%s (role, is_superuser, can_login, salted_hash, attributes) VALUES ('%s', %s, %s, '%s')",
+                         ? String.format("INSERT INTO %s.%s (role, is_superuser, can_login, salted_hash, attributes) VALUES ('%s', %s, %s, '%s', %s)",
                                          SchemaConstants.AUTH_KEYSPACE_NAME,
                                          AuthKeyspace.ROLES,
                                          escape(role.getRoleName()),
@@ -316,7 +327,7 @@ public class CassandraRoleManager implements IRoleManager
                                          options.getLogin().or(false),
                                          escape(hashpw(options.getPassword().get())),
                                          options.getAttributes().or("{}"))
-                         : String.format("INSERT INTO %s.%s (role, is_superuser, can_login, attributes) VALUES ('%s', %s, %s)",
+                         : String.format("INSERT INTO %s.%s (role, is_superuser, can_login, attributes) VALUES ('%s', %s, %s, %s)",
                                          SchemaConstants.AUTH_KEYSPACE_NAME,
                                          AuthKeyspace.ROLES,
                                          escape(role.getRoleName()),

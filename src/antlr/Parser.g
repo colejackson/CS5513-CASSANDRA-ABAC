@@ -1066,28 +1066,21 @@ policyWhereClause returns [WhereClause.Builder clause]
     ;
 
 whereRelation[WhereClause.Builder clauses]
-    : name=cident type=relationType attr=attributeName
-        { $clauses.add(new PolicyRelation(new SingleColumnRelation(name, type, null), attr)); }
-    | name=cident K_LIKE attr=attributeName
-        { $clauses.add(new PolicyRelation(new SingleColumnRelation(name, Operator.LIKE, null), attr)); }
-    | name=cident rt=containsOperator attr=attributeName
-        { $clauses.add(new PolicyRelation(new SingleColumnRelation(name, rt, null), attr)); }
-    | name=cident '[' key=term ']' type=relationType attr=attributeName
-        { $clauses.add(new PolicyRelation(new SingleColumnRelation(name, key, type, null), attr)); }
+    : name=cident type=relationType attr=attrName
+        { $clauses.add(new PolicyRelation(new SingleColumnRelation(name, type, null), Attribute.getBuilder().setName(attr).build())); }
+    | name=cident K_LIKE attr=attrName
+        { $clauses.add(new PolicyRelation(new SingleColumnRelation(name, Operator.LIKE, null), Attribute.getBuilder().setName(attr).build())); }
+    | name=cident rt=containsOperator attr=attrName
+        { $clauses.add(new PolicyRelation(new SingleColumnRelation(name, rt, null), Attribute.getBuilder().setName(attr).build())); }
+    | name=cident '[' key=term ']' type=relationType attr=attrName
+        { $clauses.add(new PolicyRelation(new SingleColumnRelation(name, key, type, null), Attribute.getBuilder().setName(attr).build())); }
     ;
 
-attributeName returns [Attribute attr]
-    @init {
-        Attribute attribute = null;
-    }
-    : name=STRING_LITERAL { attribute = Attribute.getBuilder().setName($name.text).build(); }
-    {
-        if(!AbacProxy.attributeExists(attribute))
-        {
-            throw new InvalidRequestException("This attribute does not exist.");
-        }
-        $attr = attribute;
-    }
+attrName returns [String name]
+    : t=IDENT              { $name = $t.text; }
+    | t=QUOTED_NAME        { $name = $t.text; }
+    | k=unreserved_keyword { $name = k; }
+    | QMARK {addRecognitionError("Bind variables cannot be used for attribute names"); }
     ;
 
 /**
@@ -1136,7 +1129,7 @@ createAttributeStatement returns [CreateAttributeStatement stmt]
         Attribute.Builder attrBuilder = Attribute.getBuilder();
     }
     : K_CREATE K_ATTRIBUTE
-        name=attributeName { attrBuilder.setName(name.attributeName); }
+        name=attrName { attrBuilder.setName(name); }
         type=attribute_type { attrBuilder.setType(type); }
       { $stmt = new CreateAttributeStatement(attrBuilder.build()); }
     ;
@@ -1145,7 +1138,7 @@ createAttributeStatement returns [CreateAttributeStatement stmt]
  * DROP ATTRIBUTE <name>
  */
 dropAttributeStatement returns [DropAttributeStatement stmt]
-    : K_DROP K_ATTRIBUTE name=attributeName { $stmt = new DropAttributeStatement(Attribute.getBuilder().setName(name.attributeName).build()); }
+    : K_DROP K_ATTRIBUTE name=attrName { $stmt = new DropAttributeStatement(Attribute.getBuilder().setName(name).build()); }
     ;
 
 /**
@@ -1161,10 +1154,10 @@ listAttributesStatement returns [ListAttributesStatement stmt]
  */
 setAttributeStatement returns [SetAttributeStatement stmt]
     : K_SET K_ATTRIBUTE
-        name=attributeName '=' t=attributeTerm
+        name=attrName '=' t=attributeTerm
       K_ON
         role=userOrRoleName
-      { $stmt = new SetAttributeStatement(new AttributeValue(name.attributeName, t), role); }
+      { $stmt = new SetAttributeStatement(new AttributeValue(name, t), role); }
     ;
 
 /**
@@ -1172,9 +1165,9 @@ setAttributeStatement returns [SetAttributeStatement stmt]
  */
 
 removeAttributeStatement returns [RemoveAttributeStatement stmt]
-    : K_REMOVE K_ATTRIBUTE name=attributeName
+    : K_REMOVE K_ATTRIBUTE name=attrName
       K_ON role=userOrRoleName
-      { $stmt = new RemoveAttributeStatement(new AttributeValue(name.attributeName, null), role); }
+      { $stmt = new RemoveAttributeStatement(new AttributeValue(name, null), role); }
     ;
 
 /**
