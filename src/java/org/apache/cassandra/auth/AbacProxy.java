@@ -15,6 +15,7 @@ import java.util.regex.Pattern;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 
+import org.apache.cassandra.cql3.CFName;
 import org.apache.cassandra.cql3.CQL3Type;
 import org.apache.cassandra.cql3.ColumnIdentifier;
 import org.apache.cassandra.cql3.ColumnSpecification;
@@ -24,6 +25,7 @@ import org.apache.cassandra.cql3.UntypedResultSet;
 import org.apache.cassandra.db.ConsistencyLevel;
 import org.apache.cassandra.db.marshal.UTF8Type;
 import org.apache.cassandra.exceptions.InvalidRequestException;
+import org.apache.cassandra.schema.Schema;
 import org.apache.cassandra.schema.SchemaConstants;
 import org.apache.cassandra.schema.TableMetadata;
 import org.apache.cassandra.transport.messages.ResultMessage;
@@ -69,7 +71,7 @@ public final class AbacProxy
         QueryProcessor.process(cqlQuery, ConsistencyLevel.LOCAL_ONE);
     }
 
-    public static ResultMessage listPolicies(TableMetadata table)
+    public static ResultMessage listPolicies(CFName table)
     {
         List<Policy> policies = getPolicies(table, "ALL");
 
@@ -85,12 +87,18 @@ public final class AbacProxy
         return new ResultMessage.Rows(result);
     }
 
-    public static List<Policy> getPolicies(TableMetadata table, String perm)
+    public static List<Policy> getPolicies(CFName cfname, String perm)
     {
+        if(SchemaConstants.REPLICATED_SYSTEM_KEYSPACE_NAMES.contains(cfname.getKeyspace()) ||
+           SchemaConstants.SYSTEM_KEYSPACE_NAMES.contains(cfname.getKeyspace()))
+        {
+            return ImmutableList.<Policy>builder().build();
+        }
+
         String cqlQuery = String.format("SELECT obj FROM %s.%s WHERE cf = %s AND permissions IN ('ALL', %s)",
                                         SchemaConstants.AUTH_KEYSPACE_NAME,
                                         AuthKeyspace.POLICIES,
-                                        escape(table.toString()),
+                                        escape(cfname.toString()),
                                         escape(perm));
 
         UntypedResultSet results = QueryProcessor.process(cqlQuery, ConsistencyLevel.LOCAL_ONE);

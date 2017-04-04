@@ -43,6 +43,7 @@ import Parser,Lexer;
     import org.apache.cassandra.cql3.*;
     import org.apache.cassandra.cql3.conditions.*;
     import org.apache.cassandra.cql3.functions.*;
+    import org.apache.cassandra.cql3.relations.*;
     import org.apache.cassandra.cql3.restrictions.CustomIndexExpression;
     import org.apache.cassandra.cql3.selection.*;
     import org.apache.cassandra.cql3.statements.*;
@@ -51,7 +52,9 @@ import Parser,Lexer;
     import org.apache.cassandra.exceptions.InvalidRequestException;
     import org.apache.cassandra.exceptions.SyntaxException;
     import org.apache.cassandra.schema.ColumnMetadata;
+    import org.apache.cassandra.schema.TableMetadata;
     import org.apache.cassandra.utils.Pair;
+    import org.apache.cassandra.config.DatabaseDescriptor;
 }
 
 @members {

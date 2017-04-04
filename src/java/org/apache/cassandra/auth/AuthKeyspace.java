@@ -56,7 +56,7 @@ public final class AuthKeyspace
             "CREATE TABLE %s ("
             + "policy text,"
             + "cf text,"
-            + "obj blob"
+            + "obj blob,"
             + "permissions text,"
             + "PRIMARY KEY(cf, policy, permissions))");
 
