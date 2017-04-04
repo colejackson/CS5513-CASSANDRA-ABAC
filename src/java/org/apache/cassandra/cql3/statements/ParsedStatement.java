@@ -19,7 +19,10 @@ package org.apache.cassandra.cql3.statements;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Set;
 
+import org.apache.cassandra.auth.Attribute;
+import org.apache.cassandra.auth.AttributeValue;
 import org.apache.cassandra.cql3.*;
 import org.apache.cassandra.cql3.functions.Function;
 import org.apache.cassandra.exceptions.RequestValidationException;
@@ -83,4 +86,28 @@ public abstract class ParsedStatement
     {
         return Collections.emptyList();
     }
+
+    /**
+     * Return the status of ABAC queries as it relates to this query,
+     * default to false.
+     */
+    public boolean requiresAttributes()
+    {
+        return false;
+    }
+
+    /**
+     * Return the string array of attributes that are needed for this query to complete.
+     * default to null.
+     */
+    public Set<Attribute> getRequiredAttributes()
+    {
+        return null;
+    }
+
+    /**
+     * Accept attribute values that match the required attributes needed. Defult does nothing.
+     * @param attributed
+     */
+    public void setRequiredAttributes(Set<AttributeValue> attributed) {}
 }

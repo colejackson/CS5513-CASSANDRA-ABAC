@@ -17,12 +17,13 @@
  */
 package org.apache.cassandra.service;
 
-import java.io.UnsupportedEncodingException;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -30,10 +31,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.cassandra.auth.*;
-import org.apache.cassandra.cql3.PolicyClause;
-import org.apache.cassandra.db.marshal.Int32Type;
-import org.apache.cassandra.db.marshal.ShortType;
-import org.apache.cassandra.db.marshal.UTF8Type;
+import org.apache.cassandra.cql3.CQLStatement;
+import org.apache.cassandra.cql3.relations.PolicyRelation;
+import org.apache.cassandra.cql3.statements.ParsedStatement;
+import org.apache.cassandra.cql3.statements.SelectStatement;
 import org.apache.cassandra.schema.TableMetadata;
 import org.apache.cassandra.schema.TableMetadataRef;
 import org.apache.cassandra.config.DatabaseDescriptor;
@@ -51,8 +52,6 @@ import org.apache.cassandra.utils.FBUtilities;
 import org.apache.cassandra.utils.JVMStabilityInspector;
 import org.apache.cassandra.utils.CassandraVersion;
 
-import javax.xml.crypto.Data;
-
 /**
  * State related to a client connection.
  */
@@ -65,6 +64,7 @@ public class ClientState
     private static final Set<IResource> PROTECTED_AUTH_RESOURCES = new HashSet<>();
     private static final Set<String> ALTERABLE_SYSTEM_KEYSPACES = new HashSet<>();
     private static final Set<IResource> DROPPABLE_SYSTEM_TABLES = new HashSet<>();
+
     static
     {
         // We want these system cfs to be always readable to authenticated users since many tools rely on them
@@ -433,29 +433,37 @@ public class ClientState
         return user.getPermissions(resource);
     }
 
-    public String decorateAbac(TableMetadata table, String cqlQuery)
+    public void decorateAbac(ParsedStatement prepared)
     {
-        if(user != null)
+        Set<Attribute> attributes = prepared.getRequiredAttributes();
+
+        Set<AttributeValue> setValues = new HashSet<>();
+
+        for(RoleResource role : user.getRoles())
         {
-            Set<Object> attr = user.getAttribute("test_test", UTF8Type.instance);
+            List<AttributeValue> attributeValues = DatabaseDescriptor.getRoleManager().getAttributes(role);
 
-            for(Object o : attr)
+            for(AttributeValue attributeValue : attributeValues)
             {
-                String s = (String) o;
+                if(attributes.stream().anyMatch(a -> a.attributeName.equalsIgnoreCase(attributeValue.attributeName)))
+                {
+                    tryAddAttribute(attributeValue, setValues);
+                }
             }
-
-            String tableString = table.resource.getKeyspace() + '\'' + table.resource.getTable();
-
-            Set<PolicyClause> policies = DatabaseDescriptor.getPolicyCache().getPolicies(tableString, Permission.SELECT.name());
         }
 
-        logger.info("Decorating the query [{}], success.", cqlQuery);
-
-        return cqlQuery;
+        prepared.setRequiredAttributes(setValues);
     }
 
-    public String decorateAbac(TableMetadataRef tableMetadataRef, String cqlQuery)
+    private void tryAddAttribute(AttributeValue attributeValue, Set<AttributeValue> setValues)
     {
-        return decorateAbac(tableMetadataRef.get(), cqlQuery);
+        if(setValues.stream().anyMatch(a -> a.attributeName.equalsIgnoreCase(attributeValue.attributeName)))
+        {
+            return;
+        }
+        else
+        {
+            setValues.add(attributeValue);
+        }
     }
 }

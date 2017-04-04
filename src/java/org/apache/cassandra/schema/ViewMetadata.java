@@ -23,6 +23,7 @@ import java.util.stream.Collectors;
 
 import org.antlr.runtime.*;
 import org.apache.cassandra.cql3.*;
+import org.apache.cassandra.cql3.relations.Relation;
 import org.apache.cassandra.cql3.statements.SelectStatement;
 import org.apache.cassandra.db.marshal.AbstractType;
 import org.apache.cassandra.db.view.View;

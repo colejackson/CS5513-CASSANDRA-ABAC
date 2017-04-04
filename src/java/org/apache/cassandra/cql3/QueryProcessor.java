@@ -222,20 +222,9 @@ public class QueryProcessor implements QueryHandler
         ParsedStatement.Prepared p = getStatement(queryString, queryState.getClientState());
         options.prepare(p.boundNames);
         CQLStatement prepared = p.statement;
+
         if (prepared.getBoundTerms() != options.getValues().size())
             throw new InvalidRequestException("Invalid amount of bind variables");
-
-        if (DatabaseDescriptor.isUsingAbac())
-        {
-            ClientState clientState = queryState.getClientState();
-
-            String decoratedCqlQuery = prepared.decorateAbac(clientState, queryString);
-
-            if(!queryString.equals(decoratedCqlQuery) && decoratedCqlQuery != null)
-            {
-                return process(decoratedCqlQuery, queryState, options, queryStartNanoTime);
-            }
-        }
 
         if (!queryState.getClientState().isInternal)
             metrics.regularStatementsExecuted.inc();
@@ -509,6 +498,15 @@ public class QueryProcessor implements QueryHandler
     {
         Tracing.trace("Parsing {}", queryStr);
         ParsedStatement statement = parseStatement(queryStr);
+
+        if (DatabaseDescriptor.isUsingAbac() && statement.requiresAttributes())
+        {
+            clientState.decorateAbac(statement);
+        }
+        else if(statement.requiresAttributes())
+        {
+            throw new AssertionError("ABAC features are not enabled, this query should not used ABAC.");
+        }
 
         // Set keyspace for statement that require login
         if (statement instanceof CFStatement)

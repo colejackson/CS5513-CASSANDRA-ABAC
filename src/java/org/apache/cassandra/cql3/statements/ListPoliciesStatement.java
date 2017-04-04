@@ -8,6 +8,8 @@ import org.apache.cassandra.exceptions.InvalidRequestException;
 import org.apache.cassandra.exceptions.RequestExecutionException;
 import org.apache.cassandra.exceptions.RequestValidationException;
 import org.apache.cassandra.exceptions.UnauthorizedException;
+import org.apache.cassandra.schema.ColumnMetadata;
+import org.apache.cassandra.schema.TableMetadata;
 import org.apache.cassandra.service.ClientState;
 import org.apache.cassandra.transport.messages.ResultMessage;
 
@@ -16,12 +18,13 @@ import org.apache.cassandra.transport.messages.ResultMessage;
  */
 public class ListPoliciesStatement extends AbacStatement
 {
-    private CFName cfName;
+    private final TableMetadata table;
 
-    public ListPoliciesStatement(CFName cfname)
+    public ListPoliciesStatement(CFName name)
     {
-        super(cfname);
-        this.cfName = cfname;
+        super(name);
+
+        table = TableMetadata.builder(name.getKeyspace(), name.getColumnFamily()).build();
     }
 
     @Override
@@ -49,6 +52,6 @@ public class ListPoliciesStatement extends AbacStatement
     @Override
     public ResultMessage execute(ClientState state) throws RequestValidationException, RequestExecutionException
     {
-        return AbacProxy.listAllPoliciesOnTable(cfName.getKeyspace() + '.' + cfName.getColumnFamily());
+        return AbacProxy.listPolicies(table);
     }
 }

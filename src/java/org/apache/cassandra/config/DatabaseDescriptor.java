@@ -35,7 +35,7 @@ import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
 
 import org.apache.cassandra.auth.*;
-import org.apache.cassandra.cql3.PolicyClause;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -121,8 +121,6 @@ public class DatabaseDescriptor
     private static final boolean disableSTCSInL0 = Boolean.getBoolean(Config.PROPERTY_PREFIX + "disable_stcs_in_l0");
     private static final boolean unsafeSystem = Boolean.getBoolean(Config.PROPERTY_PREFIX + "unsafesystem");
 
-    private static PolicyCache policyCache;
-
     public static void daemonInitialization() throws ConfigurationException
     {
         if (toolInitialized)
@@ -138,8 +136,6 @@ public class DatabaseDescriptor
         setConfig(loadConfig());
         applyAll();
         AuthConfig.applyAuth();
-
-        policyCache = new PolicyCache();
     }
 
     /**
@@ -2280,10 +2276,5 @@ public class DatabaseDescriptor
     public static boolean isUsingAbac()
     {
         return conf.use_abac;
-    }
-
-    public static PolicyCache getPolicyCache()
-    {
-        return policyCache;
     }
 }

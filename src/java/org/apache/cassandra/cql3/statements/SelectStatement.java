@@ -25,7 +25,11 @@ import com.google.common.base.MoreObjects;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.cassandra.auth.Attribute;
+import org.apache.cassandra.auth.AttributeValue;
 import org.apache.cassandra.auth.Permission;
+import org.apache.cassandra.cql3.relations.PolicyRelation;
+import org.apache.cassandra.cql3.relations.Relation;
 import org.apache.cassandra.schema.ColumnMetadata;
 import org.apache.cassandra.schema.Schema;
 import org.apache.cassandra.schema.TableMetadata;
@@ -932,6 +936,62 @@ public class SelectStatement implements CQLStatement
             return prepare(false);
         }
 
+        public boolean requiresAttributes()
+        {
+            for(Relation relation : whereClause.relations)
+            {
+                if(relation instanceof PolicyRelation)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        public Set<Attribute> getRequiredAttributes()
+        {
+            Set<Attribute> attributes = new HashSet<>();
+
+            for(Relation relation : whereClause.relations)
+            {
+                if(relation instanceof PolicyRelation)
+                {
+                    attributes.add(((PolicyRelation) relation).getExpectedAttribute());
+                }
+            }
+
+            return attributes;
+        }
+
+        public void setRequiredAttributes(Set<AttributeValue> attributed)
+        {
+            for(Relation relation : whereClause.relations)
+            {
+                if(relation instanceof PolicyRelation)
+                {
+                    Attribute attribute = ((PolicyRelation) relation).getExpectedAttribute();
+
+                    if(attributed.stream().noneMatch(a -> a.toAttribute().equivalentTo(attribute)))
+                    {
+                        throw new AssertionError("Something should match here, make sure it does.");
+                    }
+
+                    Term.Raw term = null;
+
+                    for(AttributeValue attr : attributed)
+                    {
+                        if(attr.toAttribute().equivalentTo(attribute))
+                        {
+                            term = attr.value;
+                        }
+                    }
+
+                    ((PolicyRelation) relation).setValue(term);
+                }
+            }
+        }
+
         public ParsedStatement.Prepared prepare(boolean forView) throws InvalidRequestException
         {
             TableMetadata table = Schema.instance.validateTable(keyspace(), columnFamily());
@@ -1304,27 +1364,6 @@ public class SelectStatement implements CQLStatement
             }
 
             return 0;
-        }
-    }
-
-    @Override
-    public String decorateAbac(ClientState clientState, String cqlQuery)
-    {
-        if(table.isView())
-        {
-            TableMetadataRef tableMetadataRef = View.findBaseTable(keyspace(), columnFamily());
-            if(tableMetadataRef != null)
-            {
-                return clientState.decorateAbac(tableMetadataRef, cqlQuery);
-            }
-            else
-            {
-                return null;
-            }
-        }
-        else
-        {
-            return clientState.decorateAbac(table, cqlQuery);
         }
     }
 }

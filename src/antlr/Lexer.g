@@ -143,7 +143,6 @@ K_ATTRIBUTE:   A T T R I B U T E;
 K_ATTRIBUTES:  A T T R I B U T E S;
 K_POLICY:      P O L I C Y;
 K_POLICIES:    P O L I C I E S;
-K_DENY:        D E N Y;
 K_SUPERUSER:   S U P E R U S E R;
 K_NOSUPERUSER: N O S U P E R U S E R;
 K_PASSWORD:    P A S S W O R D;
@@ -174,6 +173,7 @@ K_TOKEN:       T O K E N;
 K_WRITETIME:   W R I T E T I M E;
 K_DATE:        D A T E;
 K_TIME:        T I M E;
+K_REMOVE:      R E M O V E;
 
 K_NULL:        N U L L;
 K_NOT:         N O T;

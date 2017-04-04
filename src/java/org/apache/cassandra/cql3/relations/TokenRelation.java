@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.cassandra.cql3;
+package org.apache.cassandra.cql3.relations;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -24,6 +24,12 @@ import java.util.stream.Collectors;
 
 import com.google.common.base.Joiner;
 
+import org.apache.cassandra.cql3.ColumnIdentifier;
+import org.apache.cassandra.cql3.ColumnSpecification;
+import org.apache.cassandra.cql3.Operator;
+import org.apache.cassandra.cql3.Term;
+import org.apache.cassandra.cql3.Tuples;
+import org.apache.cassandra.cql3.VariableSpecifications;
 import org.apache.cassandra.schema.ColumnMetadata;
 import org.apache.cassandra.schema.TableMetadata;
 import org.apache.cassandra.cql3.Term.Raw;
@@ -49,9 +55,9 @@ public final class TokenRelation extends Relation
 {
     private final List<ColumnMetadata.Raw> entities;
 
-    private final Term.Raw value;
+    private Raw value;
 
-    public TokenRelation(List<ColumnMetadata.Raw> entities, Operator type, Term.Raw value)
+    public TokenRelation(List<ColumnMetadata.Raw> entities, Operator type, Raw value)
     {
         this.entities = entities;
         this.relationType = type;
@@ -64,12 +70,17 @@ public final class TokenRelation extends Relation
         return true;
     }
 
-    public Term.Raw getValue()
+    protected void setValue(Raw term)
+    {
+        this.value = value;
+    }
+
+    public Raw getValue()
     {
         return value;
     }
 
-    public List<? extends Term.Raw> getInValues()
+    public List<? extends Raw> getInValues()
     {
         return null;
     }

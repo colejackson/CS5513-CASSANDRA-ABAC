@@ -25,6 +25,9 @@ import javax.annotation.Nullable;
 import com.google.common.collect.Iterables;
 
 import org.apache.cassandra.cql3.*;
+import org.apache.cassandra.cql3.relations.MultiColumnRelation;
+import org.apache.cassandra.cql3.relations.Relation;
+import org.apache.cassandra.cql3.relations.SingleColumnRelation;
 import org.apache.cassandra.cql3.statements.ParsedStatement;
 import org.apache.cassandra.cql3.statements.SelectStatement;
 import org.apache.cassandra.db.*;
@@ -253,8 +256,8 @@ public class View
             if (rel.isMultiColumn())
             {
                 sb.append(((MultiColumnRelation) rel).getEntities().stream()
-                        .map(ColumnMetadata.Raw::toString)
-                        .collect(Collectors.joining(", ", "(", ")")));
+                                                     .map(ColumnMetadata.Raw::toString)
+                                                     .collect(Collectors.joining(", ", "(", ")")));
             }
             else
             {

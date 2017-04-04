@@ -17,6 +17,7 @@
  */
 package org.apache.cassandra.cql3;
 
+import java.io.Serializable;
 import java.nio.ByteBuffer;
 import java.util.List;
 
@@ -81,7 +82,7 @@ public interface Term
      *   - a function call
      *   - a marker
      */
-    public abstract class Raw implements AssignmentTestable
+    public abstract class Raw implements AssignmentTestable, Serializable
     {
         /**
          * This method validates this RawTerm is valid for provided column

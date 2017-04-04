@@ -17,11 +17,17 @@
  */
 package org.apache.cassandra.cql3.statements;
 
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
+import org.apache.cassandra.auth.Attribute;
+import org.apache.cassandra.auth.AttributeValue;
 import org.apache.cassandra.cql3.*;
 import org.apache.cassandra.cql3.conditions.ColumnCondition;
 import org.apache.cassandra.cql3.conditions.Conditions;
+import org.apache.cassandra.cql3.relations.PolicyRelation;
+import org.apache.cassandra.cql3.relations.Relation;
 import org.apache.cassandra.cql3.restrictions.StatementRestrictions;
 import org.apache.cassandra.db.Clustering;
 import org.apache.cassandra.db.Slice;
@@ -181,6 +187,63 @@ public class DeleteStatement extends ModificationStatement
             }
 
             return stmt;
+        }
+
+        public boolean requiresAttributes()
+        {
+            for(Relation relation : whereClause.relations)
+            {
+                if(relation instanceof PolicyRelation)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        public Set<Attribute> getRequiredAttributes()
+        {
+            Set<Attribute> attributes = new HashSet<>();
+
+            for(Relation relation : whereClause.relations)
+            {
+                if(relation instanceof PolicyRelation)
+                {
+                    attributes.add(((PolicyRelation) relation).getExpectedAttribute());
+                }
+            }
+
+            return attributes;
+        }
+
+        public void setRequiredAttributes(Set<AttributeValue> attributed)
+        {
+            for(Relation relation : whereClause.relations)
+            {
+                if(relation instanceof PolicyRelation)
+                {
+                    Attribute attribute = ((PolicyRelation) relation).getExpectedAttribute();
+
+                    if(attributed.stream().noneMatch(a -> a.toAttribute().equivalentTo(attribute)))
+                    {
+                        throw new AssertionError("Something should match here, make sure it does.");
+                    }
+
+                    int i = 0;
+                    Term.Raw term = null;
+
+                    for(AttributeValue attr : attributed)
+                    {
+                        if(attr.toAttribute().equivalentTo(attribute))
+                        {
+                            term = attr.value;
+                        }
+                    }
+
+                    ((PolicyRelation) relation).setValue(term);
+                }
+            }
         }
     }
 }

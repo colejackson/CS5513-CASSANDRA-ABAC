@@ -1,166 +1,233 @@
 package org.apache.cassandra.auth;
 
-import org.apache.cassandra.cql3.*;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.nio.ByteBuffer;
+import java.util.Base64;
+import java.util.List;
+import java.util.function.Function;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Iterables;
+
+import org.apache.cassandra.cql3.CQL3Type;
+import org.apache.cassandra.cql3.ColumnIdentifier;
+import org.apache.cassandra.cql3.ColumnSpecification;
+import org.apache.cassandra.cql3.QueryProcessor;
+import org.apache.cassandra.cql3.ResultSet;
+import org.apache.cassandra.cql3.UntypedResultSet;
 import org.apache.cassandra.db.ConsistencyLevel;
-import org.apache.cassandra.db.marshal.BooleanType;
-import org.apache.cassandra.db.marshal.BytesType;
 import org.apache.cassandra.db.marshal.UTF8Type;
+import org.apache.cassandra.exceptions.InvalidRequestException;
 import org.apache.cassandra.schema.SchemaConstants;
 import org.apache.cassandra.schema.TableMetadata;
 import org.apache.cassandra.transport.messages.ResultMessage;
 
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Lists;
-
-import javax.xml.bind.DatatypeConverter;
-import java.io.*;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-
-/**
- * Created by coleman on 3/26/17.
- */
 public final class AbacProxy
 {
-    private static final String KS = SchemaConstants.AUTH_KEYSPACE_NAME;
-    private static final String CF = AuthKeyspace.POLICIES;
-
-    private static final List<ColumnSpecification> metadata =
-            ImmutableList.of(
-                    new ColumnSpecification(KS, CF, new ColumnIdentifier("policy", true), UTF8Type.instance),
-                    new ColumnSpecification(KS, CF, new ColumnIdentifier("cf", true), UTF8Type.instance),
-                    new ColumnSpecification(KS, CF, new ColumnIdentifier("description", true), UTF8Type.instance),
-                    new ColumnSpecification(KS, CF, new ColumnIdentifier("type", true), UTF8Type.instance));
-
-    public static void createPolicy(String policyName, String cfName, Set<Permission> perms, PolicyClause policy)
+    public static void createPolicy(Policy policy)
     {
-        String type;
-
-        if(perms.size() > 1)
-        {
-            type = "ALL";
-        }
-        else if(perms.contains(Permission.SELECT))
-        {
-            type = "SELECT";
-        }
-        else
-        {
-            type = "MODIFY";
-        }
-
-        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        String cqlQuery;
 
         try
         {
-            ObjectOutputStream os = new ObjectOutputStream(out);
-            os.writeObject(policy);
+            cqlQuery = String.format("INSERT INTO %s.%s (%s, %s, %s, %s) VALUES (%s, %s, %s, %s)",
+                                            SchemaConstants.AUTH_KEYSPACE_NAME,
+                                            AuthKeyspace.POLICIES,
+                                            "policy",
+                                            "cf",
+                                            "obj",
+                                            "permissions",
+                                            escape(policy.policyName),
+                                            escape(policy.columnFamily.toString()),
+                                            escape(toString(policy)),
+                                            escape(policy.permission.size() > 1 ? "ALL" :
+                                                   policy.permission.contains(Permission.SELECT) ? "SELECT" :
+                                                   "MODIFY"));
         }
         catch (IOException e)
         {
-            e.printStackTrace();
+            throw new InvalidRequestException("The policy object could not be serialized, try again.");
         }
 
-        String cqlString = String.format("INSERT INTO %s.%s (%s, %s, %s, %s, %s) VALUES (%s, %s, %s, %s, %s)",
-                SchemaConstants.AUTH_KEYSPACE_NAME,
-                AuthKeyspace.POLICIES,
-                "policy",
-                "cf",
-                "description",
-                "obj",
-                "type",
-                escape(policyName),
-                escape(cfName),
-                escape(policy.toString()),
-                "0x" + DatatypeConverter.printHexBinary(out.toByteArray()),
-                escape(type));
-
-        QueryProcessor.process(cqlString, ConsistencyLevel.LOCAL_ONE);
+        QueryProcessor.process(cqlQuery, ConsistencyLevel.LOCAL_ONE);
     }
 
-    public static void dropPolicy(String columnFamilyName, String policyName)
+    public static void dropPolicy(Policy policy)
     {
-        String cqlString = String.format("DELETE FROM %s.%s WHERE cf = %s AND policy = %s",
-                SchemaConstants.AUTH_KEYSPACE_NAME,
-                AuthKeyspace.POLICIES,
-                escape(columnFamilyName),
-                escape(policyName));
+        String cqlQuery = String.format("DELETE FROM %s.%s WHERE policy = %s AND cf = %s",
+                                        SchemaConstants.AUTH_KEYSPACE_NAME,
+                                        AuthKeyspace.POLICIES,
+                                        escape(policy.policyName),
+                                        escape(policy.columnFamily.toString()));
 
-        QueryProcessor.process(cqlString, ConsistencyLevel.LOCAL_ONE);
+        QueryProcessor.process(cqlQuery, ConsistencyLevel.LOCAL_ONE);
     }
 
-    public static boolean policyExists(String columnFamilyName, String policyName)
+    public static ResultMessage listPolicies(TableMetadata table)
     {
-        String cqlString = String.format("SELECT obj FROM %s.%s WHERE cf = %s AND policy = %s",
-                SchemaConstants.AUTH_KEYSPACE_NAME,
-                AuthKeyspace.POLICIES,
-                escape(columnFamilyName),
-                escape(policyName)
-                );
+        List<Policy> policies = getPolicies(table, "ALL");
 
-        UntypedResultSet results = QueryProcessor.process(cqlString, ConsistencyLevel.LOCAL_ONE);
+        ResultSet result = new ResultSet(POLICY_SPECIFICATION);
+        for (Policy policy : policies)
+        {
+            result.addColumnValue(UTF8Type.instance.decompose(policy.policyName));
+            result.addColumnValue(UTF8Type.instance.decompose(policy.columnFamily.toString()));
+            result.addColumnValue(UTF8Type.instance.decompose(policy.permission.size() > 1 ? "ALL" :
+                                                              policy.permission.contains(Permission.SELECT) ? "SELECT" :
+                                                              "MODIFY"));
+        }
+        return new ResultMessage.Rows(result);
+    }
+
+    public static List<Policy> getPolicies(TableMetadata table, String perm)
+    {
+        String cqlQuery = String.format("SELECT obj FROM %s.%s WHERE cf = %s AND permissions IN ('ALL', %s)",
+                                        SchemaConstants.AUTH_KEYSPACE_NAME,
+                                        AuthKeyspace.POLICIES,
+                                        escape(table.toString()),
+                                        escape(perm));
+
+        UntypedResultSet results = QueryProcessor.process(cqlQuery, ConsistencyLevel.LOCAL_ONE);
+
+        Iterable<Policy> policies = Iterables.transform(results, row -> fromBytes(row != null ? row.getBlob("obj") : null));
+        return ImmutableList.<Policy>builder().addAll(policies).build();
+    }
+
+    public static boolean policyExists(Policy policy)
+    {
+        String cqlQuery = String.format("DELETE FROM %s.%s WHERE policy = %s AND cf = %s",
+                                        SchemaConstants.AUTH_KEYSPACE_NAME,
+                                        AuthKeyspace.POLICIES,
+                                        escape(policy.policyName),
+                                        escape(policy.columnFamily.toString()));
+
+        UntypedResultSet results = QueryProcessor.process(cqlQuery, ConsistencyLevel.LOCAL_ONE);
 
         return !results.isEmpty();
     }
 
-    static Set<PolicyClause> getAllPoliciesOn(String tableName, String permissionString)
+    public static void createAttribute(Attribute attribute)
     {
-        Set<PolicyClause> ret = new HashSet<>();
+        String cqlQuery = String.format("INSERT INTO %s.%s (%s, %s) VALUES (%s, %s)",
+                                 SchemaConstants.AUTH_KEYSPACE_NAME,
+                                 AuthKeyspace.ATTRIBUTES,
+                                 "attribute",
+                                 "type",
+                                 escape(attribute.attributeName),
+                                 escape(attribute.attributeType.toString()));
 
-        String cqlString = String.format("SELECT obj FROM %s.%s WHERE cf = %s",
-                SchemaConstants.AUTH_KEYSPACE_NAME,
-                AuthKeyspace.POLICIES,
-                escape(tableName));
+        QueryProcessor.process(cqlQuery, ConsistencyLevel.LOCAL_ONE);
+    }
 
-        UntypedResultSet results = QueryProcessor.process(cqlString, ConsistencyLevel.LOCAL_ONE);
+    public static void dropAttribute(Attribute attribute)
+    {
+        String cqlQuery = String.format("DELETE FROM %s.%s WHERE attribute = %s",
+                                        SchemaConstants.AUTH_KEYSPACE_NAME,
+                                        AuthKeyspace.ATTRIBUTES,
+                                        escape(attribute.attributeName));
 
-        results.forEach((UntypedResultSet.Row r) ->
+        QueryProcessor.process(cqlQuery, ConsistencyLevel.LOCAL_ONE);
+    }
+
+    public static ResultMessage listAttributes()
+    {
+        String cqlQuery = String.format("SELECT * FROM %s.%s",
+                                        SchemaConstants.AUTH_KEYSPACE_NAME,
+                                        AuthKeyspace.ATTRIBUTES);
+
+        UntypedResultSet results = QueryProcessor.process(cqlQuery, ConsistencyLevel.LOCAL_ONE);
+
+        ResultSet result = new ResultSet(ATTRIBUTE_SPECIFICATION);
+        for (UntypedResultSet.Row row : results)
         {
-            try
-            {
-                if(r.getString("type").equalsIgnoreCase(permissionString))
-                {
-                    ret.add((PolicyClause) (new ObjectInputStream(new ByteArrayInputStream(r.getBlob("obj").array())).readObject()));
-                }
-            }
-            catch (IOException | ClassNotFoundException c)
-            {
-                throw new RuntimeException("Problem with deserializing policies.");
-            }
-        });
-
-        return ret;
+            result.addColumnValue(UTF8Type.instance.decompose(row.getString("attribute")));
+            result.addColumnValue(UTF8Type.instance.decompose(row.getString("type")));
+        }
+        return new ResultMessage.Rows(result);
     }
 
-    public static ResultMessage listAllPoliciesOnTable(String tableName)
+    static Attribute getAttribute(Attribute attribute)
     {
-        String cqlString = String.format("SELECT * FROM %s.%s WHERE cf = %s",
-                SchemaConstants.AUTH_KEYSPACE_NAME,
-                AuthKeyspace.POLICIES,
-                escape(tableName));
+        String cqlQuery = String.format("SELECT * FROM %s.%s WHERE attribute = %s",
+                                        SchemaConstants.AUTH_KEYSPACE_NAME,
+                                        AuthKeyspace.ATTRIBUTES,
+                                        escape(attribute.attributeName));
 
-        UntypedResultSet results = QueryProcessor.process(cqlString, ConsistencyLevel.LOCAL_ONE);
+        UntypedResultSet results = QueryProcessor.process(cqlQuery, ConsistencyLevel.LOCAL_ONE);
 
-        return prepare(results);
+        return ROW_TO_ATTRIBUTE.apply(results.one());
     }
 
-    private static ResultMessage prepare(UntypedResultSet untypedResultSet)
+    public static boolean attributeExists(Attribute attribute)
     {
-        ResultSet results = new ResultSet(metadata);
+        String cqlQuery = String.format("SELECT * FROM %s.%s WHERE attribute = %s",
+                                        SchemaConstants.AUTH_KEYSPACE_NAME,
+                                        AuthKeyspace.ATTRIBUTES,
+                                        escape(attribute.attributeName));
 
-        untypedResultSet.forEach(row -> {
-            results.addColumnValue(row.getBytes("policy"));
-            results.addColumnValue(row.getBytes("cf"));
-            results.addColumnValue(row.getBytes("description"));
-            results.addColumnValue(row.getBytes("type"));
-        });
+        UntypedResultSet results = QueryProcessor.process(cqlQuery, ConsistencyLevel.LOCAL_ONE);
 
-        return new ResultMessage.Rows(results);
+        return !results.isEmpty();
     }
 
-    private static String escape(String str)
+    private static final String KS = SchemaConstants.AUTH_KEYSPACE_NAME;
+    private static final String POLICY_CF = AuthKeyspace.POLICIES;
+
+    private static final List<ColumnSpecification> POLICY_SPECIFICATION =
+    ImmutableList.of(
+    new ColumnSpecification(KS, POLICY_CF, new ColumnIdentifier("policy", true), UTF8Type.instance),
+    new ColumnSpecification(KS, POLICY_CF, new ColumnIdentifier("cf", true), UTF8Type.instance),
+    new ColumnSpecification(KS, POLICY_CF, new ColumnIdentifier("permissions", true), UTF8Type.instance));
+
+    private static final String ATTRIBUTE_CF = AuthKeyspace.ATTRIBUTES;
+
+    private static final List<ColumnSpecification> ATTRIBUTE_SPECIFICATION =
+    ImmutableList.of(
+    new ColumnSpecification(KS, ATTRIBUTE_CF, new ColumnIdentifier("attribute", true), UTF8Type.instance),
+    new ColumnSpecification(KS, ATTRIBUTE_CF, new ColumnIdentifier("type", true), UTF8Type.instance));
+
+    private static final Function<UntypedResultSet.Row, Attribute> ROW_TO_ATTRIBUTE = row -> Attribute.getBuilder()
+                                                                                                      .setName(row.getString("attribute"))
+                                                                                                      .setType(CQL3Type.Native.match(row.getString("type")))
+                                                                                                      .build();
+
+    private static final Pattern COMPILE = Pattern.compile("'", Pattern.LITERAL);
+
+    private static String escape(String input)
     {
-        return '\'' + str.replace("'", "''") + '\'';
+        return '\'' + COMPILE.matcher(input).replaceAll(Matcher.quoteReplacement("''")) + '\'';
+    }
+
+    private static Policy fromBytes(ByteBuffer b)
+    {
+        Object o;
+
+        try
+        {
+            ObjectInputStream ois = new ObjectInputStream(new ByteArrayInputStream(b.array()));
+            o  = ois.readObject();
+            ois.close();
+        }
+        catch(Exception e)
+        {
+            throw new InvalidRequestException("Couldn't deserialize the policy object.");
+        }
+
+        return (Policy)o;
+    }
+
+    private static String toString(Policy p) throws IOException
+    {
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        ObjectOutputStream oos = new ObjectOutputStream(baos);
+        oos.writeObject(p);
+        oos.close();
+        return Base64.getEncoder().encodeToString(baos.toByteArray());
     }
 }

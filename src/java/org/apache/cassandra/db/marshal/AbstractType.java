@@ -18,6 +18,7 @@
 package org.apache.cassandra.db.marshal;
 
 import java.io.IOException;
+import java.io.Serializable;
 import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -57,7 +58,7 @@ import static org.apache.cassandra.db.marshal.AbstractType.ComparisonType.CUSTOM
  * represent a valid ByteBuffer for the type being compared.
  */
 @Unmetered
-public abstract class AbstractType<T> implements Comparator<ByteBuffer>, AssignmentTestable
+public abstract class AbstractType<T> implements Comparator<ByteBuffer>, AssignmentTestable, Serializable
 {
     private static final Logger logger = LoggerFactory.getLogger(AbstractType.class);
 

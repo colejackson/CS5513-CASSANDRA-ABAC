@@ -17,11 +17,16 @@
  */
 package org.apache.cassandra.cql3;
 
+import java.util.List;
+import java.util.Set;
+
+import org.apache.cassandra.auth.Attribute;
 import org.apache.cassandra.cql3.functions.Function;
 import org.apache.cassandra.exceptions.*;
 import org.apache.cassandra.service.ClientState;
 import org.apache.cassandra.service.QueryState;
 import org.apache.cassandra.transport.messages.ResultMessage;
+import sun.font.AttributeValues;
 
 public interface CQLStatement
 {
@@ -68,9 +73,4 @@ public interface CQLStatement
      */
     public Iterable<Function> getFunctions();
 
-    /**
-     * Return the cql query string that represents this query after ABAC is considered.
-     * @return string representing the ABAC decorated query.
-     */
-    public String decorateAbac(ClientState clientState, String cqlQuery);
 }

@@ -21,6 +21,8 @@ import java.nio.ByteBuffer;
 import java.util.*;
 
 import com.google.common.collect.Iterables;
+
+import org.apache.cassandra.auth.Attribute;
 import org.apache.cassandra.schema.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -50,6 +52,7 @@ import org.apache.cassandra.triggers.TriggerExecutor;
 import org.apache.cassandra.utils.FBUtilities;
 import org.apache.cassandra.utils.Pair;
 import org.apache.cassandra.utils.UUIDGen;
+import sun.font.AttributeValues;
 
 import static org.apache.cassandra.cql3.statements.RequestValidations.checkFalse;
 import static org.apache.cassandra.cql3.statements.RequestValidations.checkNull;
@@ -902,29 +905,6 @@ public abstract class ModificationStatement implements CQLStatement
         protected static ColumnMetadata getColumnDefinition(TableMetadata metadata, Raw rawId)
         {
             return rawId.prepare(metadata);
-        }
-    }
-
-    @Override
-    public String decorateAbac(ClientState clientState, String cqlQuery)
-    {
-        if(metadata.isView())
-        {
-            int c;
-
-            TableMetadataRef tableMetadataRef = View.findBaseTable(keyspace(), columnFamily());
-            if(tableMetadataRef != null)
-            {
-                return clientState.decorateAbac(tableMetadataRef, cqlQuery);
-            }
-            else
-            {
-                return null;
-            }
-        }
-        else
-        {
-            return clientState.decorateAbac(metadata, cqlQuery);
         }
     }
 }
