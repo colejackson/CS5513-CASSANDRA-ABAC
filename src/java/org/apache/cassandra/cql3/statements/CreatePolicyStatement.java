@@ -21,14 +21,12 @@ import java.util.Set;
 public class CreatePolicyStatement extends AbacStatement
 {
     private final Policy policy;
-    private final CFName cfName;
 
-    public CreatePolicyStatement(Policy policy, CFName cfname)
+    public CreatePolicyStatement(Policy policy)
     {
-        super(cfname);
+        super(policy.columnFamily);
 
         this.policy = policy;
-        this.cfName = cfname;
     }
 
     @Override

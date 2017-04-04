@@ -56,9 +56,9 @@ public final class AuthKeyspace
             "CREATE TABLE %s ("
             + "policy text,"
             + "cf text,"
-            + "policy blob"
+            + "obj blob"
             + "permissions text,"
-            + "PRIMARY KEY(cf, policy))");
+            + "PRIMARY KEY(cf, policy, permissions))");
 
     private static final TableMetadata Attributes =
     parse(ATTRIBUTES,
@@ -77,7 +77,7 @@ public final class AuthKeyspace
               + "can_login boolean,"
               + "salted_hash text,"
               + "member_of set<text>,"
-              + "attributes map<text, <tuple <text, blob>>>,"
+              + "attributes map<text, text>,"
               + "PRIMARY KEY(role))");
 
     private static final TableMetadata RoleMembers =

@@ -17,6 +17,7 @@
  */
 package org.apache.cassandra.cql3.relations;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -32,7 +33,7 @@ import org.apache.cassandra.exceptions.InvalidRequestException;
 
 import static org.apache.cassandra.cql3.statements.RequestValidations.invalidRequest;
 
-public abstract class Relation
+public abstract class Relation implements Serializable
 {
     protected Operator relationType;
 

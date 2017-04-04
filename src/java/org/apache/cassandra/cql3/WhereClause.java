@@ -18,6 +18,7 @@
 
 package org.apache.cassandra.cql3;
 
+import java.io.Serializable;
 import java.util.List;
 
 import com.google.common.collect.ImmutableList;
@@ -25,13 +26,13 @@ import com.google.common.collect.ImmutableList;
 import org.apache.cassandra.cql3.relations.Relation;
 import org.apache.cassandra.cql3.restrictions.CustomIndexExpression;
 
-public final class WhereClause
+public final class WhereClause implements Serializable
 {
 
-    private static final WhereClause EMPTY = new WhereClause(new Builder());
+    private static final transient WhereClause EMPTY = new WhereClause(new Builder());
 
     public final List<Relation> relations;
-    public final List<CustomIndexExpression> expressions;
+    public final transient List<CustomIndexExpression> expressions;
 
     private WhereClause(Builder builder)
     {

@@ -34,6 +34,7 @@ import org.apache.cassandra.auth.*;
 import org.apache.cassandra.cql3.CQLStatement;
 import org.apache.cassandra.cql3.relations.PolicyRelation;
 import org.apache.cassandra.cql3.statements.ParsedStatement;
+import org.apache.cassandra.cql3.statements.SelectStatement;
 import org.apache.cassandra.schema.TableMetadata;
 import org.apache.cassandra.schema.TableMetadataRef;
 import org.apache.cassandra.config.DatabaseDescriptor;

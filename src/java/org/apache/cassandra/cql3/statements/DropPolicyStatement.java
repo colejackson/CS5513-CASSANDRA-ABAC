@@ -18,14 +18,12 @@ import org.apache.cassandra.transport.messages.ResultMessage;
 public class DropPolicyStatement extends AbacStatement
 {
     private final Policy policy;
-    private final CFName cfName;
 
-    public DropPolicyStatement(Policy policy, CFName cfname)
+    public DropPolicyStatement(Policy policy)
     {
-        super(cfname);
+        super(policy.columnFamily);
 
         this.policy = policy;
-        this.cfName = cfname;
     }
 
     @Override

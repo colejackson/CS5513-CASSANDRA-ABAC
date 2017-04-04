@@ -299,7 +299,7 @@ selectStatement returns [SelectStatement.RawStatement expr]
           {
                 TableMetadata table = TableMetadata.builder(cf.getKeyspace(), cf.getColumnFamily()).build();
                 wclause = (wclause == null) ? new WhereClause.Builder() : wclause;
-                for(Policy policy : AbacProxy.getPolicies(table))
+                for(Policy policy : AbacProxy.getPolicies(table, "SELECT"))
                 {
                     wclause.add(policy);
                 }
@@ -550,7 +550,7 @@ updateStatement returns [UpdateStatement.ParsedUpdate expr]
           {
                 TableMetadata table = TableMetadata.builder(cf.getKeyspace(), cf.getColumnFamily()).build();
                 wclause = (wclause == null) ? new WhereClause.Builder() : wclause;
-                for(Policy policy : AbacProxy.getPolicies(table))
+                for(Policy policy : AbacProxy.getPolicies(table, "MODIFY"))
                 {
                     wclause.add(policy);
                 }
@@ -596,7 +596,7 @@ deleteStatement returns [DeleteStatement.Parsed expr]
           {
                 TableMetadata table = TableMetadata.builder(cf.getKeyspace(), cf.getColumnFamily()).build();
                 wclause = (wclause == null) ? new WhereClause.Builder() : wclause;
-                for(Policy policy : AbacProxy.getPolicies(table))
+                for(Policy policy : AbacProxy.getPolicies(table, "MODIFY"))
                 {
                     wclause.add(policy);
                 }
@@ -1091,12 +1091,12 @@ createPolicyStatement returns [CreatePolicyStatement stmt]
     : K_CREATE K_POLICY
           pn=STRING_LITERAL
       K_ON
-          column=cident
+          cf=columnFamilyName
       K_ALLOW
           perms=basicPermissions
       K_WHERE
           wc=policyWhereClause
-      { $stmt = new CreatePolicyStatement(new Policy($pn.text, column, wc.build(), perms)); }
+      { $stmt = new CreatePolicyStatement(new Policy($pn.text, cf, wc.build(), perms)); }
     ;
 
 /**
@@ -1106,8 +1106,8 @@ dropPolicyStatement returns [DropPolicyStatement stmt]
     : K_DROP K_POLICY
           pn=STRING_LITERAL
       K_ON
-          column=columnFamilyName
-      { $stmt = new DropPolicyStatement(new Policy($pn.text, null, null, null), column); }
+          cf=columnFamilyName
+      { $stmt = new DropPolicyStatement(new Policy($pn.text, cf, null, null)); }
     ;
 
 /**

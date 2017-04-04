@@ -17,7 +17,6 @@
  */
 package org.apache.cassandra.auth;
 
-import java.nio.ByteBuffer;
 import java.util.*;
 import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
@@ -48,7 +47,6 @@ import org.apache.cassandra.exceptions.*;
 import org.apache.cassandra.service.QueryState;
 import org.apache.cassandra.transport.messages.ResultMessage;
 import org.apache.cassandra.utils.ByteBufferUtil;
-import org.apache.cassandra.utils.Pair;
 import org.mindrot.jbcrypt.BCrypt;
 
 /**
@@ -108,13 +106,44 @@ public class CassandraRoleManager implements IRoleManager
         }
     };
 
-    private static final Function<UntypedResultSet.Row, AttributeValue> ROW_TO_ATTRIBUTE = new Function<UntypedResultSet.Row, AttributeValue>()
+    private static final Function<UntypedResultSet.Row, List<AttributeValue>> ROW_TO_ATTRIBUTE = new Function<UntypedResultSet.Row, List<AttributeValue>>()
     {
-        public AttributeValue apply(UntypedResultSet.Row row)
+        public List<AttributeValue> apply(UntypedResultSet.Row row)
         {
-            // TODO: ABAC CREATE AN ATTRIBUTE TYPE FROM A ROW OBJECT
+            List<AttributeValue> ret = new ArrayList<>();
 
-            return null;
+            Map<String, String> map = row.getMap("attributes", UTF8Type.instance, UTF8Type.instance);
+
+            for(String key : map.keySet())
+            {
+                Attribute expected = AbacProxy.getAttribute(Attribute.getBuilder().setName(key).build());
+
+                assert expected != null;
+                AbstractType type = expected.attributeType.getType();
+
+                Term.Raw term = null;
+
+                if(type.isCompatibleWith(UTF8Type.instance))
+                {
+                    term = Constants.Literal.string(map.get(key));
+                }
+                else if(type.isCompatibleWith(FloatType.instance))
+                {
+                    term = Constants.Literal.floatingPoint(map.get(key));
+                }
+                else if(type.isCompatibleWith(Int32Type.instance))
+                {
+                    term = Constants.Literal.integer(map.get(key));
+                }
+                else if(type.isCompatibleWith(BooleanType.instance))
+                {
+                    term = Constants.Literal.bool(map.get(key));
+                }
+
+                ret.add(new AttributeValue(key, term));
+            }
+
+            return ret;
         }
     };
 
@@ -206,32 +235,11 @@ public class CassandraRoleManager implements IRoleManager
 
     public void addAttribute(AttributeValue attribute, RoleResource role)
     {
-        AbstractType type = attribute.value.getExactTypeIfKnown(SchemaConstants.SCHEMA_KEYSPACE_NAME);
-        String blobFunction = null;
-
-        if(type.isCompatibleWith(UTF8Type.instance))
-        {
-            blobFunction = "text";
-        }
-        else if(type.isCompatibleWith(FloatType.instance))
-        {
-            blobFunction = "float";
-        }
-        else if(type.isCompatibleWith(Int32Type.instance))
-        {
-            blobFunction = "int";
-        }
-        else if(type.isCompatibleWith(BooleanType.instance))
-        {
-            blobFunction = "boolean";
-        }
-
-        String cqlQuery = String.format("UPDATE %s.%s SET attributes = attribute + {%s, (%s,%s)} WHERE role = %s",
+        String cqlQuery = String.format("UPDATE %s.%s SET attributes = attribute + {%s, %s} WHERE role = %s",
                                         SchemaConstants.AUTH_KEYSPACE_NAME,
                                         AuthKeyspace.ROLES,
                                         escape(attribute.attributeName),
-                                        escape(type.asCQL3Type().toString()),
-                                        String.format("%sAsBlob(%s)", blobFunction, attribute.value.getText()),
+                                        escape(attribute.value.toString()),
                                         escape(role.getRoleName()));
 
         process(cqlQuery, consistencyForRole(role.getRoleName()));
@@ -246,9 +254,7 @@ public class CassandraRoleManager implements IRoleManager
 
         UntypedResultSet results = process(cqlQuery, consistencyForRole(roleResource.getRoleName()));
 
-        Iterable<AttributeValue> attributeValues = Iterables.transform(results, ROW_TO_ATTRIBUTE);
-
-        return ImmutableList.<AttributeValue>builder().addAll(attributeValues).build();
+        return ROW_TO_ATTRIBUTE.apply(results.one());
     }
 
     public boolean hasAttribute(AttributeValue attribute, RoleResource role)

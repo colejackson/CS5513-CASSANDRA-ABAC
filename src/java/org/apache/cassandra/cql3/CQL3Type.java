@@ -17,6 +17,7 @@
  */
 package org.apache.cassandra.cql3;
 
+import java.io.Serializable;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -38,7 +39,7 @@ import org.apache.cassandra.serializers.MarshalException;
 import org.apache.cassandra.transport.ProtocolVersion;
 import org.apache.cassandra.utils.ByteBufferUtil;
 
-public interface CQL3Type
+public interface CQL3Type extends Serializable
 {
     static final Logger logger = LoggerFactory.getLogger(CQL3Type.class);
 

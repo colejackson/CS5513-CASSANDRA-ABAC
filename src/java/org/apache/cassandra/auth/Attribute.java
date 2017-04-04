@@ -18,12 +18,14 @@
 
 package org.apache.cassandra.auth;
 
+import java.io.Serializable;
+
 import org.apache.cassandra.cql3.CQL3Type;
 
 /**
  * Created by coleman on 3/30/17.
  */
-public class Attribute
+public class Attribute implements Serializable
 {
     public final String attributeName;
     public final CQL3Type attributeType;

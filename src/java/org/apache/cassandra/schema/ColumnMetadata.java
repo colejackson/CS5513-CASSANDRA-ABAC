@@ -17,6 +17,7 @@
  */
 package org.apache.cassandra.schema;
 
+import java.io.Serializable;
 import java.nio.ByteBuffer;
 import java.util.*;
 
@@ -35,9 +36,9 @@ import org.apache.cassandra.exceptions.InvalidRequestException;
 import org.apache.cassandra.serializers.MarshalException;
 import org.apache.cassandra.utils.ByteBufferUtil;
 
-public final class ColumnMetadata extends ColumnSpecification implements Selectable, Comparable<ColumnMetadata>
+public final class ColumnMetadata extends ColumnSpecification implements Selectable, Comparable<ColumnMetadata>, Serializable
 {
-    public static final Comparator<Object> asymmetricColumnDataComparator =
+    public static final transient Comparator<Object> asymmetricColumnDataComparator =
         (a, b) -> ((ColumnData) a).column().compareTo((ColumnMetadata) b);
 
     public static final int NO_POSITION = -1;
@@ -82,9 +83,9 @@ public final class ColumnMetadata extends ColumnSpecification implements Selecta
      */
     private final int position;
 
-    private final Comparator<CellPath> cellPathComparator;
-    private final Comparator<Object> asymmetricCellPathComparator;
-    private final Comparator<? super Cell> cellComparator;
+    private final transient Comparator<CellPath> cellPathComparator;
+    private final transient Comparator<Object> asymmetricCellPathComparator;
+    private final transient Comparator<? super Cell> cellComparator;
 
     private int hash;
 
@@ -442,7 +443,7 @@ public final class ColumnMetadata extends ColumnSpecification implements Selecta
      * once the comparator is known with prepare(). This should only be used with identifiers that are actual
      * column names. See CASSANDRA-8178 for more background.
      */
-    public static abstract class Raw extends Selectable.Raw
+    public static abstract class Raw extends Selectable.Raw implements Serializable
     {
         /**
          * Creates a {@code ColumnMetadata.Raw} from an unquoted identifier string.

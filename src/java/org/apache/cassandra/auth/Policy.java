@@ -18,27 +18,30 @@
 
 package org.apache.cassandra.auth;
 
+import java.io.Serializable;
 import java.util.List;
 import java.util.Set;
 
+import org.apache.cassandra.cql3.CFName;
 import org.apache.cassandra.cql3.WhereClause;
 import org.apache.cassandra.cql3.relations.Relation;
 import org.apache.cassandra.schema.ColumnMetadata;
+import org.apache.cassandra.schema.TableMetadata;
 
 /**
  * Created by coleman on 3/30/17.
  */
-public class Policy
+public class Policy implements Serializable
 {
     public final String policyName;
 
-    public final ColumnMetadata.Raw columnFamily;
+    public final CFName columnFamily;
 
     public final WhereClause whereClause;
 
     public final Set<Permission> permission;
 
-    public Policy(String policyName, ColumnMetadata.Raw columnFamily, WhereClause whereClause, Set<Permission> perm)
+    public Policy(String policyName, CFName columnFamily, WhereClause whereClause, Set<Permission> perm)
     {
         this.policyName = policyName;
 
