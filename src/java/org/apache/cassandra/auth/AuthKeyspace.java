@@ -58,7 +58,7 @@ public final class AuthKeyspace
             + "cf text,"
             + "obj blob,"
             + "permissions text,"
-            + "PRIMARY KEY(cf, policy, permissions))");
+            + "PRIMARY KEY(cf, policy))");
 
     private static final TableMetadata Attributes =
     parse(ATTRIBUTES,

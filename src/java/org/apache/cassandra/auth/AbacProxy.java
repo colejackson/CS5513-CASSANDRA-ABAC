@@ -29,6 +29,7 @@ import org.apache.cassandra.schema.Schema;
 import org.apache.cassandra.schema.SchemaConstants;
 import org.apache.cassandra.schema.TableMetadata;
 import org.apache.cassandra.transport.messages.ResultMessage;
+import org.apache.cassandra.utils.Hex;
 
 public final class AbacProxy
 {
@@ -95,7 +96,7 @@ public final class AbacProxy
             return ImmutableList.<Policy>builder().build();
         }
 
-        String cqlQuery = String.format("SELECT obj FROM %s.%s WHERE cf = %s AND permissions IN ('ALL', %s)",
+        String cqlQuery = String.format("SELECT obj FROM %s.%s WHERE cf = %s",
                                         SchemaConstants.AUTH_KEYSPACE_NAME,
                                         AuthKeyspace.POLICIES,
                                         escape(cfname.toString()),
@@ -104,6 +105,12 @@ public final class AbacProxy
         UntypedResultSet results = QueryProcessor.process(cqlQuery, ConsistencyLevel.LOCAL_ONE);
 
         Iterable<Policy> policies = Iterables.transform(results, row -> fromBytes(row != null ? row.getBlob("obj") : null));
+
+        if(!perm.equals("ALL"))
+        {
+            policies = Iterables.filter(policies, policy -> policy != null && policy.permission.contains(Permission.match(perm)));
+        }
+
         return ImmutableList.<Policy>builder().addAll(policies).build();
     }
 
@@ -236,6 +243,6 @@ public final class AbacProxy
         ObjectOutputStream oos = new ObjectOutputStream(baos);
         oos.writeObject(p);
         oos.close();
-        return Base64.getEncoder().encodeToString(baos.toByteArray());
+        return Hex.bytesToHex(baos.toByteArray());
     }
 }

@@ -293,21 +293,7 @@ selectStatement returns [SelectStatement.RawStatement expr]
                                                                              allowFiltering,
                                                                              isJson);
 
-          WhereClause where = null;
-
-          if(DatabaseDescriptor.isUsingAbac())
-          {
-                wclause = (wclause == null) ? new WhereClause.Builder() : wclause;
-                for(Policy policy : AbacProxy.getPolicies(cf, "SELECT"))
-                {
-                    for(Relation relation : policy.whereClause.relations)
-                    {
-                        wclause.add(relation);
-                    }
-                }
-          }
-
-          where = wclause == null ? WhereClause.empty() : wclause.build();
+          WhereClause where = wclause == null ? WhereClause.empty() : wclause.build();
 
           $expr = new SelectStatement.RawStatement(cf, params, $sclause.selectors, where, limit, perPartitionLimit);
       }
@@ -549,20 +535,6 @@ updateStatement returns [UpdateStatement.ParsedUpdate expr]
       K_WHERE wclause=whereClause
       ( K_IF ( K_EXISTS { ifExists = true; } | conditions=updateConditions ))?
       {
-          WhereClause where = null;
-
-          if(DatabaseDescriptor.isUsingAbac())
-          {
-                wclause = (wclause == null) ? new WhereClause.Builder() : wclause;
-                for(Policy policy : AbacProxy.getPolicies(cf, "MODIFY"))
-                {
-                    for(Relation relation : policy.whereClause.relations)
-                    {
-                        wclause.add(relation);
-                    }
-                }
-          }
-
           $expr = new UpdateStatement.ParsedUpdate(cf,
                                                    attrs,
                                                    operations,
@@ -597,20 +569,6 @@ deleteStatement returns [DeleteStatement.Parsed expr]
       K_WHERE wclause=whereClause
       ( K_IF ( K_EXISTS { ifExists = true; } | conditions=updateConditions ))?
       {
-          WhereClause where = null;
-
-          if(DatabaseDescriptor.isUsingAbac())
-          {
-                wclause = (wclause == null) ? new WhereClause.Builder() : wclause;
-                for(Policy policy : AbacProxy.getPolicies(cf, "MODIFY"))
-                {
-                    for(Relation relation : policy.whereClause.relations)
-                    {
-                        wclause.add(relation);
-                    }
-                }
-          }
-
           $expr = new DeleteStatement.Parsed(cf,
                                              attrs,
                                              columnDeletions,

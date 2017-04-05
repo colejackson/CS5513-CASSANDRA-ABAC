@@ -21,8 +21,11 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import org.apache.cassandra.auth.AbacProxy;
 import org.apache.cassandra.auth.Attribute;
 import org.apache.cassandra.auth.AttributeValue;
+import org.apache.cassandra.auth.Policy;
+import org.apache.cassandra.config.DatabaseDescriptor;
 import org.apache.cassandra.cql3.*;
 import org.apache.cassandra.cql3.conditions.ColumnCondition;
 import org.apache.cassandra.cql3.conditions.Conditions;
@@ -126,7 +129,7 @@ public class DeleteStatement extends ModificationStatement
     public static class Parsed extends ModificationStatement.Parsed
     {
         private final List<Operation.RawDeletion> deletions;
-        private final WhereClause whereClause;
+        protected WhereClause whereClause;
 
         public Parsed(CFName name,
                       Attributes.Raw attrs,
@@ -187,6 +190,26 @@ public class DeleteStatement extends ModificationStatement
             }
 
             return stmt;
+        }
+
+        public void prepareAbac()
+        {
+            List<Policy> policies = null;
+
+            if(DatabaseDescriptor.isUsingAbac())
+            {
+                policies = AbacProxy.getPolicies(cfName, "MODIFY");
+            }
+
+            if(policies != null && !policies.isEmpty())
+            {
+                WhereClause.Builder builder = new WhereClause.Builder();
+
+                whereClause.relations.forEach(builder::add);
+                policies.forEach(p -> p.getRelations().forEach(builder::add));
+
+                whereClause = builder.build();
+            }
         }
 
         public boolean requiresAttributes()

@@ -25,9 +25,12 @@ import com.google.common.base.MoreObjects;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.cassandra.auth.AbacProxy;
 import org.apache.cassandra.auth.Attribute;
 import org.apache.cassandra.auth.AttributeValue;
 import org.apache.cassandra.auth.Permission;
+import org.apache.cassandra.auth.Policy;
+import org.apache.cassandra.config.DatabaseDescriptor;
 import org.apache.cassandra.cql3.relations.PolicyRelation;
 import org.apache.cassandra.cql3.relations.Relation;
 import org.apache.cassandra.schema.ColumnMetadata;
@@ -913,7 +916,7 @@ public class SelectStatement implements CQLStatement
     {
         public final Parameters parameters;
         public final List<RawSelector> selectClause;
-        public final WhereClause whereClause;
+        public WhereClause whereClause;
         public final Term.Raw limit;
         public final Term.Raw perPartitionLimit;
 
@@ -934,6 +937,27 @@ public class SelectStatement implements CQLStatement
         public ParsedStatement.Prepared prepare() throws InvalidRequestException
         {
             return prepare(false);
+        }
+
+        public void prepareAbac()
+        {
+            List<Policy> policies = null;
+
+            if(DatabaseDescriptor.isUsingAbac())
+            {
+                policies = AbacProxy.getPolicies(cfName, "SELECT");
+            }
+
+            if(policies != null && !policies.isEmpty())
+            {
+                WhereClause.Builder builder = new WhereClause.Builder();
+
+                whereClause.relations.forEach(builder::add);
+                int i = 0;
+                policies.forEach(p -> p.getRelations().forEach(builder::add));
+
+                whereClause = builder.build();
+            }
         }
 
         public boolean requiresAttributes()
