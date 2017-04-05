@@ -15,6 +15,7 @@ import java.util.regex.Pattern;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 
+import org.apache.cassandra.cql3.CFName;
 import org.apache.cassandra.cql3.CQL3Type;
 import org.apache.cassandra.cql3.ColumnIdentifier;
 import org.apache.cassandra.cql3.ColumnSpecification;
@@ -24,9 +25,11 @@ import org.apache.cassandra.cql3.UntypedResultSet;
 import org.apache.cassandra.db.ConsistencyLevel;
 import org.apache.cassandra.db.marshal.UTF8Type;
 import org.apache.cassandra.exceptions.InvalidRequestException;
+import org.apache.cassandra.schema.Schema;
 import org.apache.cassandra.schema.SchemaConstants;
 import org.apache.cassandra.schema.TableMetadata;
 import org.apache.cassandra.transport.messages.ResultMessage;
+import org.apache.cassandra.utils.Hex;
 
 public final class AbacProxy
 {
@@ -45,7 +48,7 @@ public final class AbacProxy
                                             "permissions",
                                             escape(policy.policyName),
                                             escape(policy.columnFamily.toString()),
-                                            escape(toString(policy)),
+                                            "0x" + toString(policy),
                                             escape(policy.permission.size() > 1 ? "ALL" :
                                                    policy.permission.contains(Permission.SELECT) ? "SELECT" :
                                                    "MODIFY"));
@@ -69,7 +72,7 @@ public final class AbacProxy
         QueryProcessor.process(cqlQuery, ConsistencyLevel.LOCAL_ONE);
     }
 
-    public static ResultMessage listPolicies(TableMetadata table)
+    public static ResultMessage listPolicies(CFName table)
     {
         List<Policy> policies = getPolicies(table, "ALL");
 
@@ -85,23 +88,35 @@ public final class AbacProxy
         return new ResultMessage.Rows(result);
     }
 
-    public static List<Policy> getPolicies(TableMetadata table, String perm)
+    public static List<Policy> getPolicies(CFName cfname, String perm)
     {
-        String cqlQuery = String.format("SELECT obj FROM %s.%s WHERE cf = %s AND permissions IN ('ALL', %s)",
+        if(SchemaConstants.REPLICATED_SYSTEM_KEYSPACE_NAMES.contains(cfname.getKeyspace()) ||
+           SchemaConstants.SYSTEM_KEYSPACE_NAMES.contains(cfname.getKeyspace()))
+        {
+            return ImmutableList.<Policy>builder().build();
+        }
+
+        String cqlQuery = String.format("SELECT obj FROM %s.%s WHERE cf = %s",
                                         SchemaConstants.AUTH_KEYSPACE_NAME,
                                         AuthKeyspace.POLICIES,
-                                        escape(table.toString()),
+                                        escape(cfname.toString()),
                                         escape(perm));
 
         UntypedResultSet results = QueryProcessor.process(cqlQuery, ConsistencyLevel.LOCAL_ONE);
 
         Iterable<Policy> policies = Iterables.transform(results, row -> fromBytes(row != null ? row.getBlob("obj") : null));
+
+        if(!perm.equals("ALL"))
+        {
+            policies = Iterables.filter(policies, policy -> policy != null && policy.permission.contains(Permission.match(perm)));
+        }
+
         return ImmutableList.<Policy>builder().addAll(policies).build();
     }
 
     public static boolean policyExists(Policy policy)
     {
-        String cqlQuery = String.format("DELETE FROM %s.%s WHERE policy = %s AND cf = %s",
+        String cqlQuery = String.format("SELECT * FROM %s.%s WHERE policy = %s AND cf = %s",
                                         SchemaConstants.AUTH_KEYSPACE_NAME,
                                         AuthKeyspace.POLICIES,
                                         escape(policy.policyName),
@@ -228,6 +243,6 @@ public final class AbacProxy
         ObjectOutputStream oos = new ObjectOutputStream(baos);
         oos.writeObject(p);
         oos.close();
-        return Base64.getEncoder().encodeToString(baos.toByteArray());
+        return Hex.bytesToHex(baos.toByteArray());
     }
 }

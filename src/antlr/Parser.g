@@ -251,7 +251,7 @@ cqlStatement returns [ParsedStatement stmt]
     | st46=listAttributesStatement         { $stmt = st46; }
     | st47=setAttributeStatement           { $stmt = st47; }
     | st48=removeAttributeStatement        { $stmt = st48; }
-    | st49=listAttributesOnRoleStatement   { $stmt = st49; }
+    | st49=listAttributeOnRoleStatement   { $stmt = st49; }
     ;
 
 /*
@@ -293,19 +293,7 @@ selectStatement returns [SelectStatement.RawStatement expr]
                                                                              allowFiltering,
                                                                              isJson);
 
-          WhereClause where = null;
-
-          if(DatabaseDescriptor.isUsingAbac())
-          {
-                TableMetadata table = TableMetadata.builder(cf.getKeyspace(), cf.getColumnFamily()).build();
-                wclause = (wclause == null) ? new WhereClause.Builder() : wclause;
-                for(Policy policy : AbacProxy.getPolicies(table, "SELECT"))
-                {
-                    wclause.add(policy);
-                }
-          }
-
-          where = wclause == null ? WhereClause.empty() : wclause.build();
+          WhereClause where = wclause == null ? WhereClause.empty() : wclause.build();
 
           $expr = new SelectStatement.RawStatement(cf, params, $sclause.selectors, where, limit, perPartitionLimit);
       }
@@ -442,6 +430,9 @@ sident returns [Selectable.Raw id]
     ;
 
 whereClause returns [WhereClause.Builder clause]
+    @init {
+        clause = new WhereClause.Builder();
+    }
     : relationOrExpression[$clause] (K_AND relationOrExpression[$clause])*
     ;
 
@@ -544,18 +535,6 @@ updateStatement returns [UpdateStatement.ParsedUpdate expr]
       K_WHERE wclause=whereClause
       ( K_IF ( K_EXISTS { ifExists = true; } | conditions=updateConditions ))?
       {
-          WhereClause where = null;
-
-          if(DatabaseDescriptor.isUsingAbac())
-          {
-                TableMetadata table = TableMetadata.builder(cf.getKeyspace(), cf.getColumnFamily()).build();
-                wclause = (wclause == null) ? new WhereClause.Builder() : wclause;
-                for(Policy policy : AbacProxy.getPolicies(table, "MODIFY"))
-                {
-                    wclause.add(policy);
-                }
-          }
-
           $expr = new UpdateStatement.ParsedUpdate(cf,
                                                    attrs,
                                                    operations,
@@ -590,18 +569,6 @@ deleteStatement returns [DeleteStatement.Parsed expr]
       K_WHERE wclause=whereClause
       ( K_IF ( K_EXISTS { ifExists = true; } | conditions=updateConditions ))?
       {
-          WhereClause where = null;
-
-          if(DatabaseDescriptor.isUsingAbac())
-          {
-                TableMetadata table = TableMetadata.builder(cf.getKeyspace(), cf.getColumnFamily()).build();
-                wclause = (wclause == null) ? new WhereClause.Builder() : wclause;
-                for(Policy policy : AbacProxy.getPolicies(table, "MODIFY"))
-                {
-                    wclause.add(policy);
-                }
-          }
-
           $expr = new DeleteStatement.Parsed(cf,
                                              attrs,
                                              columnDeletions,
@@ -1057,28 +1024,21 @@ policyWhereClause returns [WhereClause.Builder clause]
     ;
 
 whereRelation[WhereClause.Builder clauses]
-    : name=cident type=relationType attr=attributeName
-        { $clauses.add(new PolicyRelation(new SingleColumnRelation(name, type, null), attr)); }
-    | name=cident K_LIKE attr=attributeName
-        { $clauses.add(new PolicyRelation(new SingleColumnRelation(name, Operator.LIKE, null), attr)); }
-    | name=cident rt=containsOperator attr=attributeName
-        { $clauses.add(new PolicyRelation(new SingleColumnRelation(name, rt, null), attr)); }
-    | name=cident '[' key=term ']' type=relationType attr=attributeName
-        { $clauses.add(new PolicyRelation(new SingleColumnRelation(name, key, type, null), attr)); }
+    : name=cident type=relationType attr=attrName
+        { $clauses.add(new PolicyRelation(new SingleColumnRelation(name, type, null), Attribute.getBuilder().setName(attr).build())); }
+    | name=cident K_LIKE attr=attrName
+        { $clauses.add(new PolicyRelation(new SingleColumnRelation(name, Operator.LIKE, null), Attribute.getBuilder().setName(attr).build())); }
+    | name=cident rt=containsOperator attr=attrName
+        { $clauses.add(new PolicyRelation(new SingleColumnRelation(name, rt, null), Attribute.getBuilder().setName(attr).build())); }
+    | name=cident '[' key=term ']' type=relationType attr=attrName
+        { $clauses.add(new PolicyRelation(new SingleColumnRelation(name, key, type, null), Attribute.getBuilder().setName(attr).build())); }
     ;
 
-attributeName returns [Attribute attr]
-    @init {
-        Attribute attribute = null;
-    }
-    : name=STRING_LITERAL { attribute = Attribute.getBuilder().setName($name.text).build() }
-    {
-        if(!AbacProxy.attributeExists(attribute))
-        {
-            throw new InvalidRequestException("This attribute does not exist.");
-        }
-        $attr = attribute;
-    }
+attrName returns [String name]
+    : t=IDENT              { $name = $t.text; }
+    | t=QUOTED_NAME        { $name = $t.text; }
+    | k=unreserved_keyword { $name = k; }
+    | QMARK {addRecognitionError("Bind variables cannot be used for attribute names"); }
     ;
 
 /**
@@ -1127,7 +1087,7 @@ createAttributeStatement returns [CreateAttributeStatement stmt]
         Attribute.Builder attrBuilder = Attribute.getBuilder();
     }
     : K_CREATE K_ATTRIBUTE
-        name=attributeName { attrBuilder.setName(name); }
+        name=attrName { attrBuilder.setName(name); }
         type=attribute_type { attrBuilder.setType(type); }
       { $stmt = new CreateAttributeStatement(attrBuilder.build()); }
     ;
@@ -1136,7 +1096,7 @@ createAttributeStatement returns [CreateAttributeStatement stmt]
  * DROP ATTRIBUTE <name>
  */
 dropAttributeStatement returns [DropAttributeStatement stmt]
-    : K_DROP K_ATTRIBUTE name=attributeName { $stmt = new DropAttributeStatement(Attribute.getBuilder().setName(name).build()); }
+    : K_DROP K_ATTRIBUTE name=attrName { $stmt = new DropAttributeStatement(Attribute.getBuilder().setName(name).build()); }
     ;
 
 /**
@@ -1150,9 +1110,9 @@ listAttributesStatement returns [ListAttributesStatement stmt]
 /**
  * SET ATTRIBUTE <name> = <value> ON <role>
  */
-setAttributeStatement returns [CreateAttributeStatement stmt]
+setAttributeStatement returns [SetAttributeStatement stmt]
     : K_SET K_ATTRIBUTE
-        name=attributeName '=' t=attributeTerm
+        name=attrName '=' t=attributeTerm
       K_ON
         role=userOrRoleName
       { $stmt = new SetAttributeStatement(new AttributeValue(name, t), role); }
@@ -1162,19 +1122,19 @@ setAttributeStatement returns [CreateAttributeStatement stmt]
  * REMOVE ATTRIBUTE <name> ON <role>
  */
 
-removeAttributeStatement returns [DropAttributeStatement stmt]
-    : K_REMOVE K_ATTRIBUTE name=attributeName
+removeAttributeStatement returns [RemoveAttributeStatement stmt]
+    : K_REMOVE K_ATTRIBUTE name=attrName
       K_ON role=userOrRoleName
-      { $stmt = new RemoveAttributeStatement(AttributeValue(name, null), role); }
+      { $stmt = new RemoveAttributeStatement(new AttributeValue(name, null), role); }
     ;
 
 /**
  * LIST ALL ATTRIBUTES ON <role>
  */
 
-listAttributesOnRoleStatement returns [ListAttributesStatement stmt]
+listAttributeOnRoleStatement returns [ListAttributeOnRoleStatement stmt]
     : K_LIST (K_ALL)? K_ATTRIBUTES K_ON role=userOrRoleName
-    { $stmt = new ListAttributesOnRoleStatement(role); }
+    { $stmt = new ListAttributeOnRoleStatement(role); }
     ;
 
 /**
@@ -1500,14 +1460,6 @@ userOrRoleName returns [RoleName name]
     : roleName[role] {$name = role;}
     ;
 
-attributeName returns [String name]
-    : t=IDENT              { $name = $t.text; }
-    | s=STRING_LITERAL     { $name = $s.text; }
-    | t=QUOTED_NAME        { $name = $t.text; }
-    | k=unreserved_keyword { $name = k; }
-    | QMARK {addRecognitionError("Bind variables cannot be used for attribute names");}
-    ;
-
 ksName[KeyspaceElementName name]
     : t=IDENT              { $name.setKeyspace($t.text, false); }
     | t=QUOTED_NAME        { $name.setKeyspace($t.text, true); }
@@ -1550,7 +1502,7 @@ constant returns [Constants.Literal constant]
         | K_NEGATIVE_INFINITY { $constant = Constants.Literal.floatingPoint("-Infinity"); })
     ;
 
-attributeTerm returns [Term.Raw term]
+attributeTerm returns [Term.Raw constant]
     : t=STRING_LITERAL { $constant = Constants.Literal.string($t.text); }
     | t=INTEGER        { $constant = Constants.Literal.integer($t.text); }
     | t=FLOAT          { $constant = Constants.Literal.floatingPoint($t.text); }
@@ -1909,7 +1861,7 @@ native_type returns [CQL3Type t]
     | K_TIME      { $t = CQL3Type.Native.TIME; }
     ;
 
-attribute_type returns [CQLType t]
+attribute_type returns [CQL3Type t]
     : K_TEXT    { $t = CQL3Type.Native.TEXT; }
     | K_INT     { $t = CQL3Type.Native.INT; }
     | K_FLOAT   { $t = CQL3Type.Native.FLOAT; }

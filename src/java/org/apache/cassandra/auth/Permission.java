@@ -69,4 +69,17 @@ public enum Permission
 
     public static final Set<Permission> BASIC =
             Sets.immutableEnumSet(EnumSet.range(Permission.SELECT, Permission.MODIFY));
+
+    public static Permission match(String perm)
+    {
+        for(Permission p : values())
+        {
+            if(p.name().equalsIgnoreCase(perm))
+            {
+                return p;
+            }
+        }
+
+        return null;
+    }
 }

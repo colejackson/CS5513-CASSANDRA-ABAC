@@ -499,6 +499,12 @@ public class QueryProcessor implements QueryHandler
         Tracing.trace("Parsing {}", queryStr);
         ParsedStatement statement = parseStatement(queryStr);
 
+        // Set keyspace for statement that require login
+        if (statement instanceof CFStatement)
+            ((CFStatement)statement).prepareKeyspace(clientState);
+
+        statement.prepareAbac();
+
         if (DatabaseDescriptor.isUsingAbac() && statement.requiresAttributes())
         {
             clientState.decorateAbac(statement);
@@ -507,10 +513,6 @@ public class QueryProcessor implements QueryHandler
         {
             throw new AssertionError("ABAC features are not enabled, this query should not used ABAC.");
         }
-
-        // Set keyspace for statement that require login
-        if (statement instanceof CFStatement)
-            ((CFStatement)statement).prepareKeyspace(clientState);
 
         Tracing.trace("Preparing statement");
         return statement.prepare();

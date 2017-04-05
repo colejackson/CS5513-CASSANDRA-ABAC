@@ -45,7 +45,7 @@ public class RemoveAttributeStatement extends AuthenticationStatement
     {
         this.attribute = attribute;
 
-        this.role = RoleResource.fromName(role.getName());
+        this.role = RoleResource.role(role.getName());
     }
 
     public void checkAccess(ClientState state) throws UnauthorizedException, InvalidRequestException

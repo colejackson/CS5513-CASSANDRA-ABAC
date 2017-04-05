@@ -24,8 +24,11 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
 
+import org.apache.cassandra.auth.AbacProxy;
 import org.apache.cassandra.auth.Attribute;
 import org.apache.cassandra.auth.AttributeValue;
+import org.apache.cassandra.auth.Policy;
+import org.apache.cassandra.config.DatabaseDescriptor;
 import org.apache.cassandra.cql3.*;
 import org.apache.cassandra.cql3.conditions.ColumnCondition;
 import org.apache.cassandra.cql3.conditions.Conditions;
@@ -275,7 +278,29 @@ public class UpdateStatement extends ModificationStatement
     {
         // Provided for an UPDATE
         private final List<Pair<ColumnMetadata.Raw, Operation.RawUpdate>> updates;
-        private final WhereClause whereClause;
+        protected WhereClause whereClause;
+
+        public void prepareAbac()
+        {
+            List<Policy> policies = null;
+
+            if(DatabaseDescriptor.isUsingAbac())
+            {
+                policies = AbacProxy.getPolicies(cfName, "MODIFY");
+            }
+
+            if(policies != null && !policies.isEmpty())
+            {
+                WhereClause.Builder builder = new WhereClause.Builder();
+
+                int i = 0;
+
+                whereClause.relations.forEach(builder::add);
+                policies.forEach(p -> p.getRelations().forEach(builder::add));
+
+                whereClause = builder.build();
+            }
+        }
 
         /**
          * Creates a new UpdateStatement from a column family name, columns map, consistency

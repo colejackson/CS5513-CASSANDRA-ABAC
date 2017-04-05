@@ -27,8 +27,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.helpers.MessageFormatter;
 
+import org.apache.cassandra.auth.AbacProxy;
 import org.apache.cassandra.auth.Attribute;
 import org.apache.cassandra.auth.AttributeValue;
+import org.apache.cassandra.auth.Policy;
 import org.apache.cassandra.schema.TableId;
 import org.apache.cassandra.schema.TableMetadata;
 import org.apache.cassandra.schema.ColumnMetadata;
@@ -515,6 +517,14 @@ public class BatchStatement implements CQLStatement
         {
             for (ModificationStatement.Parsed statement : parsedStatements)
                 statement.prepareKeyspace(state);
+        }
+
+        public void prepareAbac()
+        {
+            for(ModificationStatement.Parsed statement : parsedStatements)
+            {
+                statement.prepareAbac();
+            }
         }
 
         public ParsedStatement.Prepared prepare() throws InvalidRequestException

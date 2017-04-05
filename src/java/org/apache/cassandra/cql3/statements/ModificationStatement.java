@@ -23,6 +23,7 @@ import java.util.*;
 import com.google.common.collect.Iterables;
 
 import org.apache.cassandra.auth.Attribute;
+import org.apache.cassandra.config.DatabaseDescriptor;
 import org.apache.cassandra.schema.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

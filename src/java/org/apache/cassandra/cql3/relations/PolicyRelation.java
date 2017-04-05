@@ -43,6 +43,8 @@ public class PolicyRelation extends Relation
 
     public PolicyRelation(Relation relation, Attribute expectedAttribute)
     {
+        this.relationType = relation.operator();
+
         this.relation = relation;
 
         this.expectedAttribute = expectedAttribute;

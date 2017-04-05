@@ -18,13 +18,9 @@ import org.apache.cassandra.transport.messages.ResultMessage;
  */
 public class ListPoliciesStatement extends AbacStatement
 {
-    private final TableMetadata table;
-
     public ListPoliciesStatement(CFName name)
     {
         super(name);
-
-        table = TableMetadata.builder(name.getKeyspace(), name.getColumnFamily()).build();
     }
 
     @Override
@@ -52,6 +48,6 @@ public class ListPoliciesStatement extends AbacStatement
     @Override
     public ResultMessage execute(ClientState state) throws RequestValidationException, RequestExecutionException
     {
-        return AbacProxy.listPolicies(table);
+        return AbacProxy.listPolicies(cfName);
     }
 }

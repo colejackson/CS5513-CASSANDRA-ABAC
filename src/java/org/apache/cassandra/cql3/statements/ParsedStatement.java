@@ -110,4 +110,9 @@ public abstract class ParsedStatement
      * @param attributed
      */
     public void setRequiredAttributes(Set<AttributeValue> attributed) {}
+
+    /**
+     * Accept attribute values that match the required attributes needed. Defult does nothing.
+     */
+    public void prepareAbac() {}
 }

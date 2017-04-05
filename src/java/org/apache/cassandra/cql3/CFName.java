@@ -17,7 +17,9 @@
  */
 package org.apache.cassandra.cql3;
 
-public class CFName extends KeyspaceElementName
+import java.io.Serializable;
+
+public class CFName extends KeyspaceElementName implements Serializable
 {
     private String cfName;
 
